@@ -1,0 +1,780 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             String              @id @default(cuid())
+  email          String              @unique
+  name           String?
+  password       String?
+  role           UserRole            @default(ASSOCIATE)
+  avatar         String?
+  phone          String?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  hourlyRate     Float?
+  isActive       Boolean             @default(true)
+  lastLoginAt    DateTime?
+  managerId      String?
+  activities     Activity[]
+  clientRequests ClientRequest[]
+  comments       Comment[]
+  mentions       CommentMention[]
+  documents      Document[]
+  notifications  Notification[]
+  assignments    ProjectAssignment[]
+  recurringWork  RecurringWork[]
+  sessions       Session[]
+  tasks          Task[]              @relation("AssignedTasks")
+  createdTasks   Task[]              @relation("CreatedTasks")
+  timeEntries    TimeEntry[]
+  manager        User?               @relation("TeamHierarchy", fields: [managerId], references: [id])
+  subordinates   User[]              @relation("TeamHierarchy")
+  createdTemplates WorkflowTemplate[] @relation("TemplateCreator")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  createdAt    DateTime @default(now())
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Client {
+  id                     String              @id @default(cuid())
+  clientType             ClientType          @default(INDIVIDUAL)
+  legalName              String
+  preferredName          String?
+  entityType             EntityType?
+  taxId                  String?
+  dateOfIncorporation    DateTime?
+  primaryEmail           String
+  primaryPhone           String?
+  mailingStreet          String?
+  mailingCity            String?
+  mailingState           String?
+  mailingZip             String?
+  mailingCountry         String?             @default("USA")
+  billingStreet          String?
+  billingCity            String?
+  billingState           String?
+  billingZip             String?
+  billingCountry         String?
+  billingAddressSame     Boolean             @default(true)
+  servicesRequired       ServiceType[]
+  engagementStartDate    DateTime?
+  primaryAccountManager  String?
+  billingPreference      BillingPreference   @default(MONTHLY)
+  onboardingStatus       OnboardingStatus    @default(PENDING_DOCS)
+  kycAmlStatus           KycAmlStatus        @default(NOT_STARTED)
+  governmentIdUploaded   Boolean             @default(false)
+  businessDocsUploaded   Boolean             @default(false)
+  engagementLetterSigned Boolean             @default(false)
+  accountingSoftware     AccountingSoftware?
+  fiscalYearStartMonth   Int?                @default(1)
+  tags                   String[]
+  internalNotes          String?
+  riskRating             RiskRating?
+  status                 ClientStatus        @default(ACTIVE)
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime            @updatedAt
+  approvalStatus         ApprovalStatus      @default(APPROVED)
+  approvedAt             DateTime?
+  approvedById           String?
+  createdById            String?
+  rejectionReason        String?
+  contacts               ClientContact[]
+  portalAccess           ClientPortalAccess?
+  clientRequests         ClientRequest[]
+  documents              Document[]
+  emailThreads           EmailThread[]
+  invoices               Invoice[]
+  projects               Project[]
+  recurringWork          RecurringWork[]
+  timeEntries            TimeEntry[]
+}
+
+model ClientContact {
+  id        String   @id @default(cuid())
+  name      String
+  email     String?
+  phone     String?
+  role      String?
+  isPrimary Boolean  @default(false)
+  clientId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+}
+
+model Project {
+  id              String              @id @default(cuid())
+  name            String
+  description     String?
+  type            ProjectType
+  status          ProjectStatus       @default(NOT_STARTED)
+  priority        Priority            @default(MEDIUM)
+  startDate       DateTime?
+  dueDate         DateTime?
+  completedAt     DateTime?
+  budget          Float?
+  notes           String?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  clientId        String
+  recurringWorkId String?
+  templateId      String?
+  activities      Activity[]
+  clientRequests  ClientRequest[]
+  comments        Comment[]
+  documents       Document[]
+  emailThreads    EmailThread[]
+  invoices        Invoice[]
+  milestones      Milestone[]
+  client          Client              @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  recurringWork   RecurringWork?      @relation("GeneratedFromRecurring", fields: [recurringWorkId], references: [id])
+  template        WorkflowTemplate?   @relation("ProjectTemplate", fields: [templateId], references: [id])
+  assignments     ProjectAssignment[]
+  tasks           Task[]
+  timeEntries     TimeEntry[]
+}
+
+model ProjectAssignment {
+  id        String         @id @default(cuid())
+  role      AssignmentRole @default(PREPARER)
+  userId    String
+  projectId String
+  createdAt DateTime       @default(now())
+  project   Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, projectId])
+}
+
+model Task {
+  id          String      @id @default(cuid())
+  title       String
+  description String?
+  status      TaskStatus  @default(TODO)
+  priority    Priority    @default(MEDIUM)
+  taskType    TaskType    @default(TEAM_TASK)
+  dueDate     DateTime?
+  completedAt DateTime?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  projectId   String
+  assigneeId  String?
+  createdById String
+  dependsOnId String?
+  order       Int         @default(0)
+  parentId    String?
+  comments    Comment[]
+  assignee    User?       @relation("AssignedTasks", fields: [assigneeId], references: [id])
+  createdBy   User        @relation("CreatedTasks", fields: [createdById], references: [id])
+  dependsOn   Task?       @relation("TaskDependency", fields: [dependsOnId], references: [id])
+  dependents  Task[]      @relation("TaskDependency")
+  parent      Task?       @relation("Subtasks", fields: [parentId], references: [id], onDelete: Cascade)
+  subtasks    Task[]      @relation("Subtasks")
+  project     Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  timeEntries TimeEntry[]
+}
+
+model Document {
+  id             String           @id @default(cuid())
+  name           String
+  description    String?
+  type           DocumentType
+  category       DocumentCategory
+  status         DocumentStatus   @default(PENDING)
+  fileUrl        String?
+  fileSize       Int?
+  mimeType       String?
+  version        Int              @default(1)
+  dueDate        DateTime?
+  receivedAt     DateTime?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  clientId       String?
+  projectId      String?
+  uploadedById   String?
+  clientRequests ClientRequest[]
+  client         Client?          @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  project        Project?         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  uploadedBy     User?            @relation(fields: [uploadedById], references: [id])
+}
+
+model Milestone {
+  id          String          @id @default(cuid())
+  title       String
+  description String?
+  dueDate     DateTime
+  completedAt DateTime?
+  status      MilestoneStatus @default(PENDING)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  projectId   String
+  project     Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+model Activity {
+  id          String   @id @default(cuid())
+  action      String
+  description String?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  userId      String?
+  projectId   String?
+  project     Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user        User?    @relation(fields: [userId], references: [id])
+}
+
+model Comment {
+  id        String           @id @default(cuid())
+  content   String
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  userId    String
+  projectId String?
+  taskId    String?
+  project   Project?         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  task      Task?            @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user      User             @relation(fields: [userId], references: [id])
+  mentions  CommentMention[]
+}
+
+model CommentMention {
+  id        String   @id @default(cuid())
+  commentId String
+  userId    String
+  createdAt DateTime @default(now())
+  comment   Comment  @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@unique([commentId, userId])
+}
+
+model WorkflowTemplate {
+  id            String                    @id @default(cuid())
+  name          String
+  description   String?
+  isActive      Boolean                   @default(true)
+  createdAt     DateTime                  @default(now())
+  updatedAt     DateTime                  @updatedAt
+  createdById   String?
+  createdBy     User?                     @relation("TemplateCreator", fields: [createdById], references: [id])
+  projects      Project[]                 @relation("ProjectTemplate")
+  recurringWork RecurringWork[]
+  sections      WorkflowTemplateSection[]
+}
+
+model WorkflowTemplateSection {
+  id          String                 @id @default(cuid())
+  name        String
+  order       Int
+  templateId  String
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
+  template    WorkflowTemplate       @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  tasks       WorkflowTemplateTask[]
+}
+
+model WorkflowTemplateTask {
+  id                String                    @id @default(cuid())
+  title             String
+  description       String?
+  order             Int
+  taskType          TemplateTaskType          @default(TEAM_TASK)
+  isRequired        Boolean                   @default(true)
+  daysOffset        Int                       @default(0)
+  allowClientUpload Boolean                   @default(false)
+  sectionId         String
+  createdAt         DateTime                  @default(now())
+  updatedAt         DateTime                  @updatedAt
+  section           WorkflowTemplateSection   @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  subtasks          WorkflowTemplateSubtask[]
+  automations       WorkflowTemplateAutomation[]
+  attachments       WorkflowTemplateAttachment[]
+}
+
+model WorkflowTemplateSubtask {
+  id          String               @id @default(cuid())
+  title       String
+  order       Int
+  isRequired  Boolean              @default(false)
+  taskId      String
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+  task        WorkflowTemplateTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+}
+
+model WorkflowTemplateAutomation {
+  id          String               @id @default(cuid())
+  trigger     AutomationTrigger    @default(TASK_COMPLETED)
+  action      AutomationAction
+  actionData  Json?
+  taskId      String
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+  task        WorkflowTemplateTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+}
+
+model WorkflowTemplateAttachment {
+  id          String               @id @default(cuid())
+  name        String
+  fileUrl     String
+  fileSize    Int?
+  mimeType    String?
+  taskId      String
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+  task        WorkflowTemplateTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+}
+
+enum TemplateTaskType {
+  TEAM_TASK
+  CLIENT_REQUEST
+}
+
+enum AutomationTrigger {
+  TASK_COMPLETED
+}
+
+enum AutomationAction {
+  CHANGE_PROJECT_TAG
+  SEND_EMAIL_TO_CLIENT
+  CREATE_PROJECT
+}
+
+model RecurringWork {
+  id                String              @id @default(cuid())
+  name              String
+  description       String?
+  projectType       ProjectType
+  frequency         RecurrenceFrequency
+  interval          Int                 @default(1)
+  dayOfWeek         Int?
+  dayOfMonth        Int?
+  monthOfYear       Int?
+  startDate         DateTime
+  endDate           DateTime?
+  nextRunDate       DateTime
+  lastRunDate       DateTime?
+  isActive          Boolean             @default(true)
+  autoAssign        Boolean             @default(true)
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  clientId          String
+  templateId        String?
+  assigneeId        String?
+  generatedProjects Project[]           @relation("GeneratedFromRecurring")
+  assignee          User?               @relation(fields: [assigneeId], references: [id])
+  client            Client              @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  template          WorkflowTemplate?   @relation(fields: [templateId], references: [id])
+}
+
+model ClientPortalAccess {
+  id           String    @id @default(cuid())
+  clientId     String    @unique
+  accessToken  String    @unique @default(cuid())
+  isActive     Boolean   @default(true)
+  lastAccessAt DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  client       Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+}
+
+model ClientRequest {
+  id            String              @id @default(cuid())
+  title         String
+  description   String?
+  type          ClientRequestType
+  status        ClientRequestStatus @default(PENDING)
+  dueDate       DateTime?
+  reminderSent  Boolean             @default(false)
+  reminderCount Int                 @default(0)
+  lastReminder  DateTime?
+  completedAt   DateTime?
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+  clientId      String
+  projectId     String?
+  documentId    String?
+  createdById   String
+  client        Client              @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  createdBy     User                @relation(fields: [createdById], references: [id])
+  document      Document?           @relation(fields: [documentId], references: [id])
+  project       Project?            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+model Invoice {
+  id            String        @id @default(cuid())
+  invoiceNumber String        @unique
+  status        InvoiceStatus @default(DRAFT)
+  issueDate     DateTime      @default(now())
+  dueDate       DateTime
+  subtotal      Float
+  tax           Float         @default(0)
+  discount      Float         @default(0)
+  total         Float
+  paidAmount    Float         @default(0)
+  paidAt        DateTime?
+  notes         String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  clientId      String
+  projectId     String?
+  client        Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  project       Project?      @relation(fields: [projectId], references: [id])
+  items         InvoiceItem[]
+  payments      Payment[]
+}
+
+model InvoiceItem {
+  id          String   @id @default(cuid())
+  description String
+  quantity    Float    @default(1)
+  rate        Float
+  amount      Float
+  invoiceId   String
+  createdAt   DateTime @default(now())
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+}
+
+model Payment {
+  id        String        @id @default(cuid())
+  amount    Float
+  method    PaymentMethod
+  reference String?
+  notes     String?
+  paidAt    DateTime      @default(now())
+  createdAt DateTime      @default(now())
+  invoiceId String
+  invoice   Invoice       @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+}
+
+model TimeEntry {
+  id          String    @id @default(cuid())
+  description String?
+  startTime   DateTime
+  endTime     DateTime?
+  duration    Int?
+  billable    Boolean   @default(true)
+  billed      Boolean   @default(false)
+  rate        Float?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  userId      String
+  projectId   String?
+  taskId      String?
+  clientId    String?
+  client      Client?   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  project     Project?  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  task        Task?     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id])
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  type      NotificationType
+  title     String
+  message   String
+  isRead    Boolean          @default(false)
+  readAt    DateTime?
+  actionUrl String?
+  metadata  Json?
+  createdAt DateTime         @default(now())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model EmailThread {
+  id        String   @id @default(cuid())
+  subject   String
+  snippet   String?
+  isRead    Boolean  @default(false)
+  isStarred Boolean  @default(false)
+  isPinned  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  clientId  String?
+  projectId String?
+  emails    Email[]
+  client    Client?  @relation(fields: [clientId], references: [id])
+  project   Project? @relation(fields: [projectId], references: [id])
+}
+
+model Email {
+  id          String            @id @default(cuid())
+  messageId   String?           @unique
+  from        String
+  to          String[]
+  cc          String[]
+  subject     String
+  body        String
+  bodyHtml    String?
+  isInbound   Boolean           @default(true)
+  sentAt      DateTime
+  createdAt   DateTime          @default(now())
+  threadId    String
+  thread      EmailThread       @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  attachments EmailAttachment[]
+}
+
+model EmailAttachment {
+  id        String   @id @default(cuid())
+  name      String
+  mimeType  String
+  size      Int
+  url       String?
+  emailId   String
+  createdAt DateTime @default(now())
+  email     Email    @relation(fields: [emailId], references: [id], onDelete: Cascade)
+}
+
+enum UserRole {
+  PARTNER
+  MANAGER
+  ASSOCIATE
+}
+
+enum ClientType {
+  INDIVIDUAL
+  BUSINESS
+  TRUST
+  NONPROFIT
+}
+
+enum EntityType {
+  LLC
+  S_CORP
+  C_CORP
+  PARTNERSHIP
+  SOLE_PROPRIETORSHIP
+  LLP
+  OTHER
+}
+
+enum ServiceType {
+  TAX_PREPARATION
+  BOOKKEEPING
+  PAYROLL
+  AUDIT
+  REVIEW
+  COMPILATION
+  ADVISORY
+  HST_SERVICES
+  TAX_REORGANIZATION
+  OTHER
+}
+
+enum BillingPreference {
+  HOURLY
+  FIXED_FEE
+  MONTHLY
+  QUARTERLY
+  ANNUALLY
+  PROJECT_BASED
+}
+
+enum OnboardingStatus {
+  PENDING_DOCS
+  IN_PROGRESS
+  ONBOARDING_COMPLETE
+  ON_HOLD
+}
+
+enum KycAmlStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  VERIFIED
+  FAILED
+  EXPIRED
+}
+
+enum AccountingSoftware {
+  QUICKBOOKS_ONLINE
+  QUICKBOOKS_DESKTOP
+  XERO
+  FRESHBOOKS
+  WAVE
+  SAGE
+  ZOHO_BOOKS
+  ERP_SYSTEM
+  NONE
+  OTHER
+}
+
+enum RiskRating {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum ClientStatus {
+  ACTIVE
+  INACTIVE
+  PROSPECT
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ProjectType {
+  TAX_RETURN_INDIVIDUAL
+  TAX_RETURN_BUSINESS
+  BOOKKEEPING
+  PAYROLL
+  AUDIT
+  REVIEW
+  COMPILATION
+  ADVISORY
+  OTHER
+}
+
+enum ProjectStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  WAITING_FOR_CLIENT
+  IN_REVIEW
+  COMPLETED
+  ON_HOLD
+  CANCELLED
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum AssignmentRole {
+  LEAD
+  REVIEWER
+  PREPARER
+  SUPPORT
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  IN_REVIEW
+  COMPLETED
+  CANCELLED
+}
+
+enum TaskType {
+  TEAM_TASK
+  CLIENT_REQUEST
+}
+
+enum DocumentType {
+  NEEDED_FROM_CLIENT
+  RECEIVED_FROM_CLIENT
+  CREATED_FOR_CLIENT
+  INTERNAL
+}
+
+enum DocumentCategory {
+  TAX_FORM
+  FINANCIAL_STATEMENT
+  BANK_STATEMENT
+  RECEIPT
+  INVOICE
+  CONTRACT
+  ID_DOCUMENT
+  CORRESPONDENCE
+  REPORT
+  OTHER
+}
+
+enum DocumentStatus {
+  PENDING
+  REQUESTED
+  RECEIVED
+  IN_REVIEW
+  APPROVED
+  REJECTED
+  DELIVERED
+}
+
+enum MilestoneStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  OVERDUE
+}
+
+enum RecurrenceFrequency {
+  DAILY
+  WEEKLY
+  BIWEEKLY
+  MONTHLY
+  QUARTERLY
+  ANNUALLY
+}
+
+enum ClientRequestType {
+  DOCUMENT_UPLOAD
+  INFORMATION
+  SIGNATURE
+  PAYMENT
+  REVIEW
+  APPROVAL
+}
+
+enum ClientRequestStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  OVERDUE
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  VIEWED
+  PAID
+  PARTIAL
+  OVERDUE
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentMethod {
+  CASH
+  CHECK
+  CREDIT_CARD
+  BANK_TRANSFER
+  ACH
+  PAYPAL
+  OTHER
+}
+
+enum NotificationType {
+  TASK_ASSIGNED
+  TASK_COMPLETED
+  TASK_DUE_SOON
+  TASK_OVERDUE
+  PROJECT_ASSIGNED
+  PROJECT_COMPLETED
+  DOCUMENT_RECEIVED
+  DOCUMENT_REQUESTED
+  CLIENT_REQUEST
+  COMMENT_MENTION
+  INVOICE_PAID
+  DEADLINE_REMINDER
+  SYSTEM
+}
