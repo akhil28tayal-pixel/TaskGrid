@@ -7,15 +7,16 @@ export const revalidate = 0;
 export const dynamicParams = true;
 
 interface TemplatePageProps {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 export default async function TemplatePage({ params }: TemplatePageProps) {
   try {
-    const template = await getWorkflowTemplateById(params.id);
+    const { id } = await params;
+    const template = await getWorkflowTemplateById(id);
 
     if (!template) {
-      console.error('Template not found:', params.id);
+      console.error('Template not found:', id);
       notFound();
     }
 

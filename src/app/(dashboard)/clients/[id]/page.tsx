@@ -7,15 +7,16 @@ export const revalidate = 0;
 export const dynamicParams = true;
 
 interface ClientDetailPageProps {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 export default async function ClientDetailPage({ params }: ClientDetailPageProps) {
   try {
-    const result = await getClientById(params.id);
+    const { id } = await params;
+    const result = await getClientById(id);
 
     if (!result.success || !result.client) {
-      console.error('Client not found:', params.id, result.error);
+      console.error('Client not found:', id, result.error);
       notFound();
     }
 

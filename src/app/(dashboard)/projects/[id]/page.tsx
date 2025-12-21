@@ -7,15 +7,16 @@ export const revalidate = 0;
 export const dynamicParams = true;
 
 interface ProjectPageProps {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 export default async function ProjectPage({ params }: ProjectPageProps) {
   try {
-    const result = await getProjectById(params.id);
+    const { id } = await params;
+    const result = await getProjectById(id);
 
     if (!result.success || !result.project) {
-      console.error('Project not found:', params.id, result.error);
+      console.error('Project not found:', id, result.error);
       notFound();
     }
 
