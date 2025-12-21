@@ -21,9 +21,20 @@ export async function getClientPortalAccess(clientId: string) {
 
 export async function createClientPortalAccess(clientId: string) {
   try {
+    // Get client email
+    const client = await prisma.client.findUnique({
+      where: { id: clientId },
+      select: { primaryEmail: true },
+    });
+
+    if (!client) {
+      return { success: false, error: "Client not found" };
+    }
+
     const access = await prisma.clientPortalAccess.create({
       data: {
         clientId,
+        email: client.primaryEmail,
         isActive: true,
       },
     });
@@ -280,6 +291,378 @@ export async function getClientPortalData(accessToken: string) {
   } catch (error) {
     console.error("Failed to fetch client portal data:", error);
     return { success: false, error: "Failed to fetch portal data" };
+  }
+}
+
+// ============================================
+// BULK DOCUMENT REQUESTS
+// ============================================
+
+// ============================================
+// PASSWORD SETUP
+// ============================================
+
+import bcrypt from "bcryptjs";
+
+export async function verifyPasswordSetupToken(token: string) {
+  try {
+    const portalAccess = await prisma.clientPortalAccess.findUnique({
+      where: { passwordSetupToken: token },
+    });
+
+    if (!portalAccess) {
+      return { success: false, error: "Invalid setup link." };
+    }
+
+    if (portalAccess.passwordSetupExpiry && new Date() > portalAccess.passwordSetupExpiry) {
+      return { success: false, error: "Setup link has expired. Please contact your account manager." };
+    }
+
+    if (portalAccess.password) {
+      return { success: false, error: "Password has already been set. Please log in." };
+    }
+
+    return { success: true, email: portalAccess.email };
+  } catch (error) {
+    console.error("Failed to verify password setup token:", error);
+    return { success: false, error: "Failed to verify setup link." };
+  }
+}
+
+export async function setupClientPassword(token: string, password: string) {
+  try {
+    const portalAccess = await prisma.clientPortalAccess.findUnique({
+      where: { passwordSetupToken: token },
+    });
+
+    if (!portalAccess) {
+      return { success: false, error: "Invalid setup link." };
+    }
+
+    if (portalAccess.passwordSetupExpiry && new Date() > portalAccess.passwordSetupExpiry) {
+      return { success: false, error: "Setup link has expired. Please contact your account manager." };
+    }
+
+    if (portalAccess.password) {
+      return { success: false, error: "Password has already been set." };
+    }
+
+    // Hash the password
+    const hashedPassword = await bcrypt.hash(password, 12);
+
+    // Update the portal access with the new password and clear the setup token
+    await prisma.clientPortalAccess.update({
+      where: { id: portalAccess.id },
+      data: {
+        password: hashedPassword,
+        passwordSetupToken: null,
+        passwordSetupExpiry: null,
+      },
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to setup client password:", error);
+    return { success: false, error: "Failed to set password." };
+  }
+}
+
+export async function resendPasswordSetupEmail(clientId: string) {
+  try {
+    const portalAccess = await prisma.clientPortalAccess.findUnique({
+      where: { clientId },
+      include: { client: true },
+    });
+
+    if (!portalAccess) {
+      return { success: false, error: "Portal access not found." };
+    }
+
+    if (portalAccess.password) {
+      return { success: false, error: "Password has already been set." };
+    }
+
+    // Generate new token
+    const passwordSetupToken = `setup_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
+    const passwordSetupExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+
+    await prisma.clientPortalAccess.update({
+      where: { id: portalAccess.id },
+      data: {
+        passwordSetupToken,
+        passwordSetupExpiry,
+      },
+    });
+
+    const setupLink = `${process.env.NEXTAUTH_URL}/client-setup-password?token=${passwordSetupToken}`;
+    
+    // TODO: Send actual email
+    console.log(`📧 Resent portal setup link for ${portalAccess.email}: ${setupLink}`);
+
+    return { success: true, setupLink };
+  } catch (error) {
+    console.error("Failed to resend password setup email:", error);
+    return { success: false, error: "Failed to resend setup email." };
+  }
+}
+
+// ============================================
+// CLIENT DASHBOARD DATA
+// ============================================
+
+export async function getClientDashboardData(clientId: string) {
+  try {
+    const client = await prisma.client.findUnique({
+      where: { id: clientId },
+      include: {
+        projects: {
+          where: { status: { not: "CANCELLED" } },
+          orderBy: { dueDate: "asc" },
+          include: {
+            tasks: {
+              where: { parentId: null },
+            },
+          },
+        },
+        clientRequests: {
+          where: { status: { in: ["PENDING", "IN_PROGRESS"] } },
+          orderBy: { dueDate: "asc" },
+          include: {
+            project: {
+              select: { name: true },
+            },
+          },
+        },
+      },
+    });
+
+    if (!client) {
+      return { success: false, error: "Client not found" };
+    }
+
+    // Fetch tasks assigned to client (CLIENT_REQUEST type with notification sent)
+    const clientTasks = await prisma.task.findMany({
+      where: {
+        taskType: "CLIENT_REQUEST",
+        clientNotificationSentAt: { not: null },
+        project: {
+          clientId: clientId,
+        },
+        status: { in: ["TODO", "IN_PROGRESS"] },
+      },
+      orderBy: { clientNotificationSentAt: "desc" },
+      include: {
+        project: {
+          select: { name: true },
+        },
+      },
+      take: 5,
+    });
+
+    // Calculate project progress
+    const projectsWithProgress = client.projects
+      .filter((p) => p.status !== "COMPLETED")
+      .map((project) => {
+        const totalTasks = project.tasks.length;
+        const completedTasks = project.tasks.filter(
+          (t) => t.status === "COMPLETED"
+        ).length;
+        const progress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+
+        return {
+          id: project.id,
+          name: project.name,
+          status: project.status,
+          dueDate: project.dueDate,
+          progress,
+        };
+      });
+
+    // Format requests
+    const requests = client.clientRequests.map((req) => ({
+      id: req.id,
+      title: req.title,
+      type: req.type,
+      status: req.status,
+      dueDate: req.dueDate,
+      projectName: req.project?.name || null,
+    }));
+
+    // Format client tasks
+    const tasks = clientTasks.map((task) => ({
+      id: task.id,
+      title: task.title,
+      description: task.description,
+      status: task.status,
+      dueDate: task.dueDate,
+      projectName: task.project?.name || null,
+      notificationSentAt: task.clientNotificationSentAt,
+    }));
+
+    // Calculate stats
+    const stats = {
+      activeProjects: client.projects.filter(
+        (p) => p.status !== "COMPLETED" && p.status !== "CANCELLED"
+      ).length,
+      pendingRequests: client.clientRequests.length,
+      completedProjects: client.projects.filter(
+        (p) => p.status === "COMPLETED"
+      ).length,
+      pendingTasks: clientTasks.length,
+    };
+
+    return {
+      success: true,
+      data: {
+        clientName: client.preferredName || client.legalName,
+        projects: projectsWithProgress,
+        requests,
+        tasks,
+        stats,
+      },
+    };
+  } catch (error) {
+    console.error("Failed to fetch client dashboard data:", error);
+    return { success: false, error: "Failed to fetch dashboard data" };
+  }
+}
+
+// ============================================
+// CLIENT TASKS
+// ============================================
+
+export async function getClientTasks(clientId: string) {
+  try {
+    // Fetch client requests (legacy)
+    const clientRequests = await prisma.clientRequest.findMany({
+      where: { clientId },
+      orderBy: { createdAt: "desc" },
+      include: {
+        project: {
+          select: { name: true },
+        },
+      },
+    });
+
+    // Fetch tasks that have been sent to the client (CLIENT_REQUEST type with notification sent)
+    const projectTasks = await prisma.task.findMany({
+      where: {
+        taskType: "CLIENT_REQUEST",
+        clientNotificationSentAt: { not: null },
+        project: {
+          clientId: clientId,
+        },
+      },
+      orderBy: { clientNotificationSentAt: "desc" },
+      include: {
+        project: {
+          select: { name: true },
+        },
+      },
+    });
+
+    // Combine both sources
+    const tasksFromRequests = clientRequests.map((req) => ({
+      id: req.id,
+      title: req.title,
+      description: req.description,
+      status: req.status,
+      dueDate: req.dueDate?.toISOString() || null,
+      type: req.type,
+      projectName: req.project?.name || null,
+      notificationSentAt: null,
+      source: "client_request" as const,
+    }));
+
+    const tasksFromProjects = projectTasks.map((task) => {
+      // Determine request type based on task title/description
+      let requestType = "DOCUMENT_UPLOAD"; // default
+      const titleLower = task.title.toLowerCase();
+      
+      if (titleLower.includes("upload") || titleLower.includes("submit") || titleLower.includes("provide")) {
+        requestType = "DOCUMENT_UPLOAD";
+      } else if (titleLower.includes("question") || titleLower.includes("answer") || titleLower.includes("what") || titleLower.includes("how")) {
+        requestType = "ASK_QUESTION";
+      } else if (titleLower.includes("review") || titleLower.includes("check") || titleLower.includes("view")) {
+        requestType = "SEND_DOCUMENT";
+      }
+
+      return {
+        id: task.id,
+        title: task.title,
+        description: task.description,
+        status: task.status,
+        dueDate: task.dueDate?.toISOString() || null,
+        type: requestType,
+        projectName: task.project?.name || null,
+        notificationSentAt: task.clientNotificationSentAt?.toISOString() || null,
+        source: "project_task" as const,
+        question: task.question || null,
+        answer: task.answer || null,
+      };
+    });
+
+    const allTasks = [...tasksFromProjects, ...tasksFromRequests];
+
+    return { success: true, tasks: allTasks };
+  } catch (error) {
+    console.error("Failed to fetch client tasks:", error);
+    return { success: false, error: "Failed to fetch tasks" };
+  }
+}
+
+// ============================================
+// CLIENT DOCUMENTS
+// ============================================
+
+export async function getClientDocuments(clientId: string) {
+  try {
+    const documents = await prisma.document.findMany({
+      where: { clientId },
+      orderBy: { createdAt: "desc" },
+      include: {
+        project: {
+          select: { name: true },
+        },
+      },
+    });
+
+    const formattedDocs = documents.map((doc) => ({
+      id: doc.id,
+      name: doc.name,
+      type: doc.type,
+      size: doc.fileSize ? `${Math.round(doc.fileSize / 1024)} KB` : "N/A",
+      uploadedAt: doc.createdAt.toISOString(),
+      projectName: doc.project?.name || null,
+    }));
+
+    return { success: true, documents: formattedDocs };
+  } catch (error) {
+    console.error("Failed to fetch client documents:", error);
+    return { success: false, error: "Failed to fetch documents" };
+  }
+}
+
+// ============================================
+// CLIENT BILLING
+// ============================================
+
+export async function getClientBilling(clientId: string) {
+  try {
+    // For now, return empty data as billing/invoices may not be implemented yet
+    // This can be extended when Invoice model is added
+    return {
+      success: true,
+      invoices: [],
+      stats: {
+        totalDue: 0,
+        totalPaid: 0,
+        pendingInvoices: 0,
+      },
+    };
+  } catch (error) {
+    console.error("Failed to fetch client billing:", error);
+    return { success: false, error: "Failed to fetch billing data" };
   }
 }
 

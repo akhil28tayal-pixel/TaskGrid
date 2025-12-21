@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { Plus, Search, Filter, MoreHorizontal, Users, Eye, Pencil, Trash2, Check, X } from "lucide-react";
@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { CreateClientDialog, ClientFormData } from "./CreateClientDialog";
 import { createClient, deleteClient, approveClient, rejectClient } from "@/app/actions/clients";
+import { getTeamMembers } from "@/app/actions/team";
 
 interface Client {
   id: string;
@@ -61,6 +62,13 @@ function getInitials(name: string) {
     .slice(0, 2);
 }
 
+interface TeamMember {
+  id: string;
+  name: string | null;
+  email: string;
+  role: string;
+}
+
 export function ClientsPageContent({ initialClients }: ClientsPageContentProps) {
   const { data: session } = useSession();
   const userRole = (session?.user as any)?.role;
@@ -70,6 +78,15 @@ export function ClientsPageContent({ initialClients }: ClientsPageContentProps) 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [clients, setClients] = useState<Client[]>(initialClients);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+
+  useEffect(() => {
+    const fetchTeamMembers = async () => {
+      const members = await getTeamMembers();
+      setTeamMembers(members);
+    };
+    fetchTeamMembers();
+  }, []);
 
   const handleCreateClient = async (data: ClientFormData) => {
     const result = await createClient(data);
@@ -311,6 +328,7 @@ export function ClientsPageContent({ initialClients }: ClientsPageContentProps) 
         open={isDialogOpen}
         onOpenChange={setIsDialogOpen}
         onSubmit={handleCreateClient}
+        teamMembers={teamMembers}
       />
     </div>
   );

@@ -238,7 +238,7 @@ export function CreateProjectModal({ open, onOpenChange }: CreateProjectModalPro
               <div className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50">
                 <div className="flex items-center gap-4">
                   <div className="p-2 bg-emerald-50 rounded-lg">
-                    <FileText className="h-5 w-5 text-emerald-600" />
+                    <FileText className="h-5 w-5 text-blue-600" />
                   </div>
                   <div>
                     <p className="font-medium">From Scratch</p>
@@ -258,7 +258,7 @@ export function CreateProjectModal({ open, onOpenChange }: CreateProjectModalPro
               <div className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50">
                 <div className="flex items-center gap-4">
                   <div className="p-2 bg-emerald-50 rounded-lg">
-                    <ClipboardList className="h-5 w-5 text-emerald-600" />
+                    <ClipboardList className="h-5 w-5 text-blue-600" />
                   </div>
                   <div>
                     <p className="font-medium">From Template</p>
@@ -278,7 +278,7 @@ export function CreateProjectModal({ open, onOpenChange }: CreateProjectModalPro
               <div className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50">
                 <div className="flex items-center gap-4">
                   <div className="p-2 bg-emerald-50 rounded-lg">
-                    <Plus className="h-5 w-5 text-emerald-600" />
+                    <Plus className="h-5 w-5 text-blue-600" />
                   </div>
                   <div>
                     <p className="font-medium">New Template</p>
@@ -322,7 +322,7 @@ export function CreateProjectModal({ open, onOpenChange }: CreateProjectModalPro
                   >
                     <div className="flex items-center gap-4">
                       <div className="p-2 bg-emerald-50 rounded-lg">
-                        <ClipboardList className="h-5 w-5 text-emerald-600" />
+                        <ClipboardList className="h-5 w-5 text-blue-600" />
                       </div>
                       <div>
                         <p className="font-medium">{template.name}</p>
@@ -495,7 +495,7 @@ export function CreateProjectModal({ open, onOpenChange }: CreateProjectModalPro
                       >
                         <span>{member.name || member.email}</span>
                         {selectedAssignees.includes(member.id) && (
-                          <span className="text-emerald-600">✓</span>
+                          <span className="text-blue-600">✓</span>
                         )}
                       </div>
                     ))}
@@ -518,7 +518,7 @@ export function CreateProjectModal({ open, onOpenChange }: CreateProjectModalPro
               {/* More Options */}
               <button
                 type="button"
-                className="flex items-center gap-1 text-emerald-600 text-sm font-medium"
+                className="flex items-center gap-1 text-blue-600 text-sm font-medium"
                 onClick={() => setShowMoreOptions(!showMoreOptions)}
               >
                 More Options
@@ -550,7 +550,7 @@ export function CreateProjectModal({ open, onOpenChange }: CreateProjectModalPro
                   handleCreate();
                 }}
                 disabled={!projectName.trim() || !clientId || isSubmitting}
-                className="bg-emerald-600 hover:bg-emerald-700"
+                className="bg-blue-600 hover:bg-blue-700"
               >
                 {isSubmitting ? "Creating..." : "Create"}
               </Button>

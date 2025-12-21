@@ -13,5 +13,5 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
     notFound();
   }
 
-  return <ProjectEditor project={result.project} />;
+  return <ProjectEditor project={result.project} userRole={result.userRole} />;
 }

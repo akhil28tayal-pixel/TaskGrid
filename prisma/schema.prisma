@@ -36,6 +36,7 @@ model User {
   manager        User?               @relation("TeamHierarchy", fields: [managerId], references: [id])
   subordinates   User[]              @relation("TeamHierarchy")
   createdTemplates WorkflowTemplate[] @relation("TemplateCreator")
+  taskAttachments TaskAttachment[]
 }
 
 model Session {
@@ -131,6 +132,7 @@ model Project {
   clientId        String
   recurringWorkId String?
   templateId      String?
+  tagId           String?
   activities      Activity[]
   clientRequests  ClientRequest[]
   comments        Comment[]
@@ -141,9 +143,19 @@ model Project {
   client          Client              @relation(fields: [clientId], references: [id], onDelete: Cascade)
   recurringWork   RecurringWork?      @relation("GeneratedFromRecurring", fields: [recurringWorkId], references: [id])
   template        WorkflowTemplate?   @relation("ProjectTemplate", fields: [templateId], references: [id])
+  tag             ProjectTag?         @relation(fields: [tagId], references: [id])
   assignments     ProjectAssignment[]
   tasks           Task[]
   timeEntries     TimeEntry[]
+}
+
+model ProjectTag {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  color     String    @default("#6B7280")
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  projects  Project[]
 }
 
 model ProjectAssignment {
@@ -159,31 +171,50 @@ model ProjectAssignment {
 }
 
 model Task {
-  id          String      @id @default(cuid())
-  title       String
-  description String?
-  status      TaskStatus  @default(TODO)
-  priority    Priority    @default(MEDIUM)
-  taskType    TaskType    @default(TEAM_TASK)
-  dueDate     DateTime?
-  completedAt DateTime?
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-  projectId   String
-  assigneeId  String?
-  createdById String
-  dependsOnId String?
-  order       Int         @default(0)
-  parentId    String?
-  comments    Comment[]
-  assignee    User?       @relation("AssignedTasks", fields: [assigneeId], references: [id])
-  createdBy   User        @relation("CreatedTasks", fields: [createdById], references: [id])
-  dependsOn   Task?       @relation("TaskDependency", fields: [dependsOnId], references: [id])
-  dependents  Task[]      @relation("TaskDependency")
-  parent      Task?       @relation("Subtasks", fields: [parentId], references: [id], onDelete: Cascade)
-  subtasks    Task[]      @relation("Subtasks")
-  project     Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  timeEntries TimeEntry[]
+  id                        String      @id @default(cuid())
+  title                     String
+  description               String?
+  status                    TaskStatus  @default(TODO)
+  priority                  Priority    @default(MEDIUM)
+  taskType                  TaskType    @default(TEAM_TASK)
+  dueDate                   DateTime?
+  completedAt               DateTime?
+  createdAt                 DateTime    @default(now())
+  updatedAt                 DateTime    @updatedAt
+  projectId                 String
+  assigneeId                String?
+  createdById               String
+  dependsOnId               String?
+  order                     Int         @default(0)
+  parentId                  String?
+  clientNotificationSentAt  DateTime?
+  question                  String?
+  answer                    String?
+  answeredAt                DateTime?
+  comments                  Comment[]
+  attachments               TaskAttachment[]
+  documents                 Document[]
+  assignee                  User?       @relation("AssignedTasks", fields: [assigneeId], references: [id])
+  createdBy                 User        @relation("CreatedTasks", fields: [createdById], references: [id])
+  dependsOn                 Task?       @relation("TaskDependency", fields: [dependsOnId], references: [id])
+  dependents                Task[]      @relation("TaskDependency")
+  parent                    Task?       @relation("Subtasks", fields: [parentId], references: [id], onDelete: Cascade)
+  subtasks                  Task[]      @relation("Subtasks")
+  project                   Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  timeEntries               TimeEntry[]
+}
+
+model TaskAttachment {
+  id          String   @id @default(cuid())
+  name        String
+  fileUrl     String
+  fileSize    Int?
+  mimeType    String?
+  createdAt   DateTime @default(now())
+  taskId      String
+  uploadedById String
+  task        Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  uploadedBy  User     @relation(fields: [uploadedById], references: [id])
 }
 
 model Document {
@@ -203,10 +234,12 @@ model Document {
   updatedAt      DateTime         @updatedAt
   clientId       String?
   projectId      String?
+  taskId         String?
   uploadedById   String?
   clientRequests ClientRequest[]
   client         Client?          @relation(fields: [clientId], references: [id], onDelete: Cascade)
   project        Project?         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  task           Task?            @relation(fields: [taskId], references: [id], onDelete: Cascade)
   uploadedBy     User?            @relation(fields: [uploadedById], references: [id])
 }
 
@@ -380,14 +413,18 @@ model RecurringWork {
 }
 
 model ClientPortalAccess {
-  id           String    @id @default(cuid())
-  clientId     String    @unique
-  accessToken  String    @unique @default(cuid())
-  isActive     Boolean   @default(true)
-  lastAccessAt DateTime?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  client       Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  id                  String    @id @default(cuid())
+  clientId            String    @unique
+  email               String    @unique
+  password            String?
+  accessToken         String    @unique @default(cuid())
+  passwordSetupToken  String?   @unique
+  passwordSetupExpiry DateTime?
+  isActive            Boolean   @default(true)
+  lastAccessAt        DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  client              Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
 }
 
 model ClientRequest {
@@ -481,17 +518,19 @@ model TimeEntry {
 }
 
 model Notification {
-  id        String           @id @default(cuid())
-  type      NotificationType
-  title     String
-  message   String
-  isRead    Boolean          @default(false)
-  readAt    DateTime?
-  actionUrl String?
-  metadata  Json?
-  createdAt DateTime         @default(now())
-  userId    String
-  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id          String           @id @default(cuid())
+  type        NotificationType
+  title       String
+  message     String
+  isRead      Boolean          @default(false)
+  readAt      DateTime?
+  actionUrl   String?
+  metadata    Json?
+  relatedId   String?
+  relatedType String?
+  createdAt   DateTime         @default(now())
+  userId      String
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model EmailThread {

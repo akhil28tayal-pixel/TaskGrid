@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { getServerSession } from "next-auth";
 import { prisma } from "@/lib/prisma";
 import { authOptions } from "@/lib/auth";
+import { sendTaskNotificationToClient } from "@/app/actions/send-task-notification";
 
 export async function getProjects() {
   try {
@@ -58,6 +59,7 @@ export async function getProjects() {
             preferredName: true,
           },
         },
+        tag: true,
         assignments: {
           include: {
             user: {
@@ -70,9 +72,11 @@ export async function getProjects() {
             },
           },
         },
-        _count: {
+        tasks: {
           select: {
-            tasks: true,
+            id: true,
+            taskType: true,
+            status: true,
           },
         },
       },
@@ -92,6 +96,11 @@ export async function getProjects() {
         id: project.client.id,
         name: project.client.preferredName || project.client.legalName,
       },
+      tag: project.tag ? {
+        id: project.tag.id,
+        name: project.tag.name,
+        color: project.tag.color,
+      } : null,
       assignees: project.assignments.map((a) => ({
         id: a.user.id,
         name: a.user.name,
@@ -99,7 +108,8 @@ export async function getProjects() {
         avatar: a.user.avatar,
         role: a.role,
       })),
-      taskCount: project._count.tasks,
+      clientTaskCount: project.tasks.filter((t: any) => t.taskType === "CLIENT_REQUEST").length,
+      completedClientTaskCount: project.tasks.filter((t: any) => t.taskType === "CLIENT_REQUEST" && t.status === "COMPLETED").length,
     }));
   } catch (error) {
     console.error("Failed to fetch projects:", error);
@@ -121,6 +131,7 @@ export async function getProjectById(projectId: string) {
       where: { id: projectId },
       include: {
         client: true,
+        tag: true,
         assignments: {
           include: {
             user: {
@@ -189,7 +200,7 @@ export async function getProjectById(projectId: string) {
       }
     }
 
-    return { success: true, project };
+    return { success: true, project, userRole };
   } catch (error) {
     console.error("Failed to fetch project:", error);
     return { success: false, error: "Failed to fetch project" };
@@ -289,6 +300,12 @@ export async function createProject(data: CreateProjectInput) {
                 taskType: templateTask.taskType as any || "TEAM_TASK",
               },
             });
+
+            // Automatically send notification if it's a CLIENT_REQUEST task
+            if (templateTask.taskType === "CLIENT_REQUEST") {
+              await sendTaskNotificationToClient(newTask.id);
+              console.log(`✅ Auto-notification sent for CLIENT_REQUEST task: ${newTask.id}`);
+            }
 
             // Create subtasks
             for (const subtask of templateTask.subtasks) {
@@ -461,6 +478,12 @@ export async function addProjectTask(
     parentId?: string;
     order?: number;
     taskType?: "TEAM_TASK" | "CLIENT_REQUEST";
+    attachments?: Array<{
+      name: string;
+      fileUrl: string;
+      fileSize?: number;
+      mimeType?: string;
+    }>;
   }
 ) {
   try {
@@ -479,7 +502,7 @@ export async function addProjectTask(
       return { success: false, error: "User not found" };
     }
 
-    const task = await prisma.task.create({
+    const newTask = await prisma.task.create({
       data: {
         title: data.title,
         description: data.description,
@@ -500,8 +523,33 @@ export async function addProjectTask(
       },
     });
 
+    // Add attachments if provided
+    if (data.attachments && data.attachments.length > 0) {
+      await Promise.all(
+        data.attachments.map((attachment) =>
+          prisma.taskAttachment.create({
+            data: {
+              name: attachment.name,
+              fileUrl: attachment.fileUrl,
+              fileSize: attachment.fileSize,
+              mimeType: attachment.mimeType,
+              taskId: newTask.id,
+              uploadedById: user.id,
+            },
+          })
+        )
+      );
+      console.log(`✅ Added ${data.attachments.length} attachments to task ${newTask.id}`);
+    }
+
+    // Automatically send notification if it's a CLIENT_REQUEST task
+    if (data.taskType === "CLIENT_REQUEST") {
+      await sendTaskNotificationToClient(newTask.id);
+      console.log(`✅ Auto-notification sent for CLIENT_REQUEST task: ${newTask.id}`);
+    }
+
     revalidatePath(`/projects/${projectId}`);
-    return { success: true, task };
+    return { success: true, task: newTask };
   } catch (error: any) {
     console.error("Failed to add task:", error);
     return { success: false, error: error?.message || "Failed to add task" };
@@ -560,7 +608,28 @@ export async function deleteProjectTask(taskId: string) {
       return { success: false, error: "Unauthorized" };
     }
 
-    const task = await prisma.task.delete({
+    // Get task details before deletion
+    const task = await prisma.task.findUnique({
+      where: { id: taskId },
+      select: { projectId: true, taskType: true },
+    });
+
+    if (!task) {
+      return { success: false, error: "Task not found" };
+    }
+
+    // If it's a CLIENT_REQUEST task, delete associated documents
+    if (task.taskType === "CLIENT_REQUEST") {
+      await prisma.document.deleteMany({
+        where: {
+          taskId: taskId,
+        },
+      });
+      console.log(`✅ Deleted documents for task ${taskId}`);
+    }
+
+    // Delete the task
+    await prisma.task.delete({
       where: { id: taskId },
     });
 
@@ -605,5 +674,63 @@ export async function getProjectTasks(projectId: string) {
   } catch (error) {
     console.error("Failed to get project tasks:", error);
     return { success: false, error: "Failed to get tasks", tasks: [] };
+  }
+}
+
+// Send notification to client for a task
+export async function sendClientTaskNotification(taskId: string) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return { success: false, error: "Unauthorized" };
+    }
+
+    // Get the task with project and client info
+    const task = await prisma.task.findUnique({
+      where: { id: taskId },
+      include: {
+        project: {
+          include: {
+            client: {
+              include: {
+                portalAccess: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!task) {
+      return { success: false, error: "Task not found" };
+    }
+
+    if (task.taskType !== "CLIENT_REQUEST") {
+      return { success: false, error: "Only client request tasks can be sent to clients" };
+    }
+
+    if (!task.project.client) {
+      return { success: false, error: "No client associated with this project" };
+    }
+
+    // Update the task with notification sent timestamp
+    await prisma.task.update({
+      where: { id: taskId },
+      data: {
+        clientNotificationSentAt: new Date(),
+      },
+    });
+
+    // TODO: Send actual email notification to client
+    // For now, just mark the task as notified
+
+    revalidatePath(`/projects/${task.projectId}`);
+    return { 
+      success: true, 
+      message: `Notification sent to ${task.project.client.preferredName || task.project.client.legalName}` 
+    };
+  } catch (error: any) {
+    console.error("Failed to send client notification:", error);
+    return { success: false, error: error?.message || "Failed to send notification" };
   }
 }

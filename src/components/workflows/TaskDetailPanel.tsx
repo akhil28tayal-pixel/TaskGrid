@@ -296,7 +296,7 @@ export function TaskDetailPanel({ task, onClose, onTaskDeleted, onTaskUpdated }:
               </div>
             ) : (
               <button
-                className="mt-2 flex items-center gap-2 text-sm text-emerald-600 hover:text-emerald-700"
+                className="mt-2 flex items-center gap-2 text-sm text-blue-600 hover:text-emerald-700"
                 onClick={() => setIsAddingSubtask(true)}
               >
                 <Plus className="h-4 w-4" />
@@ -375,7 +375,7 @@ export function TaskDetailPanel({ task, onClose, onTaskDeleted, onTaskUpdated }:
               </div>
             ) : (
               <button
-                className="flex items-center gap-2 text-sm text-emerald-600 hover:text-emerald-700"
+                className="flex items-center gap-2 text-sm text-blue-600 hover:text-emerald-700"
                 onClick={() => setIsAddingAutomation(true)}
               >
                 <Plus className="h-4 w-4" />
@@ -403,7 +403,7 @@ export function TaskDetailPanel({ task, onClose, onTaskDeleted, onTaskUpdated }:
                 className="focus:outline-none"
               >
                 {allowClientUpload ? (
-                  <ToggleRight className="h-8 w-8 text-emerald-600" />
+                  <ToggleRight className="h-8 w-8 text-blue-600" />
                 ) : (
                   <ToggleLeft className="h-8 w-8 text-gray-400" />
                 )}
@@ -465,7 +465,7 @@ export function TaskDetailPanel({ task, onClose, onTaskDeleted, onTaskUpdated }:
             accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt"
           />
           <button
-            className="flex items-center gap-2 text-sm text-emerald-600 hover:text-emerald-700 disabled:opacity-50"
+            className="flex items-center gap-2 text-sm text-blue-600 hover:text-emerald-700 disabled:opacity-50"
             onClick={() => fileInputRef.current?.click()}
             disabled={isUploading}
           >

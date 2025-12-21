@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { getServerSession } from "next-auth";
 import { prisma } from "@/lib/prisma";
 import { authOptions } from "@/lib/auth";
+import { sendClientPortalInvite } from "@/lib/email";
 
 // Types matching the form data
 interface CreateClientInput {
@@ -102,15 +103,46 @@ export async function createClient(data: CreateClientInput) {
         approvedAt: userRole === "PARTNER" ? new Date() : null,
       },
     });
+
+    // Auto-create client portal access with password setup token
+    const passwordSetupToken = `setup_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
+    const passwordSetupExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+
+    const portalAccess = await prisma.clientPortalAccess.create({
+      data: {
+        clientId: client.id,
+        email: data.primaryEmail,
+        passwordSetupToken,
+        passwordSetupExpiry,
+        isActive: true,
+      },
+    });
+
+    // Send email to client with password setup link
+    const setupLink = `${process.env.NEXTAUTH_URL}/client-setup-password?token=${passwordSetupToken}`;
+    const clientName = data.preferredName || data.legalName;
+    
+    // Send the invitation email
+    const emailResult = await sendClientPortalInvite(data.primaryEmail, clientName, setupLink);
+    if (!emailResult.success) {
+      console.warn("Failed to send portal invite email, but client was created:", emailResult.error);
+    }
+    console.log(`📧 Client portal setup link for ${data.primaryEmail}: ${setupLink}`);
     
     revalidatePath("/clients");
     revalidatePath("/dashboard");
     
     const message = userRole === "PARTNER" 
-      ? "Client created successfully" 
+      ? "Client created successfully. Portal access invitation sent." 
       : "Client submitted for Partner approval";
     
-    return { success: true, client, message, needsApproval: userRole !== "PARTNER" };
+    return { 
+      success: true, 
+      client, 
+      message, 
+      needsApproval: userRole !== "PARTNER",
+      portalSetupLink: setupLink,
+    };
   } catch (error) {
     console.error("Failed to create client:", error);
     return { success: false, error: "Failed to create client" };

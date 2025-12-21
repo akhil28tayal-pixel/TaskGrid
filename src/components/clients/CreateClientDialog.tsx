@@ -415,17 +415,28 @@ const MONTHS = [
   { value: 12, label: "December" },
 ];
 
+interface TeamMember {
+  id: string;
+  name: string | null;
+  email: string;
+  role: string;
+}
+
 interface CreateClientDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSubmit: (data: ClientFormData) => Promise<void>;
+  teamMembers?: TeamMember[];
 }
 
-export function CreateClientDialog({ open, onOpenChange, onSubmit }: CreateClientDialogProps) {
+export function CreateClientDialog({ open, onOpenChange, onSubmit, teamMembers = [] }: CreateClientDialogProps) {
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<ClientFormData>(initialFormData);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [tagInput, setTagInput] = useState("");
+  
+  // Filter to only show Partners and Managers
+  const managers = teamMembers.filter(m => m.role === "PARTNER" || m.role === "MANAGER");
 
   const updateFormData = <K extends keyof ClientFormData>(field: K, value: ClientFormData[K]) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -511,7 +522,7 @@ export function CreateClientDialog({ open, onOpenChange, onSubmit }: CreateClien
         <div className="flex-1 overflow-y-auto py-4 px-1">
           {currentStep === 1 && <Step1Identification formData={formData} updateFormData={updateFormData} />}
           {currentStep === 2 && <Step2Contact formData={formData} updateFormData={updateFormData} />}
-          {currentStep === 3 && <Step3Engagement formData={formData} updateFormData={updateFormData} toggleService={toggleService} />}
+          {currentStep === 3 && <Step3Engagement formData={formData} updateFormData={updateFormData} toggleService={toggleService} managers={managers} />}
           {currentStep === 4 && <Step4Compliance formData={formData} updateFormData={updateFormData} />}
           {currentStep === 5 && <Step5Accounting formData={formData} updateFormData={updateFormData} />}
           {currentStep === 6 && <Step6Notes formData={formData} updateFormData={updateFormData} tagInput={tagInput} setTagInput={setTagInput} addTag={addTag} removeTag={removeTag} />}
@@ -650,7 +661,7 @@ function Step2Contact({ formData, updateFormData }: { formData: ClientFormData; 
   );
 }
 
-function Step3Engagement({ formData, updateFormData, toggleService }: { formData: ClientFormData; updateFormData: <K extends keyof ClientFormData>(field: K, value: ClientFormData[K]) => void; toggleService: (s: ServiceType) => void }) {
+function Step3Engagement({ formData, updateFormData, toggleService, managers }: { formData: ClientFormData; updateFormData: <K extends keyof ClientFormData>(field: K, value: ClientFormData[K]) => void; toggleService: (s: ServiceType) => void; managers: { id: string; name: string | null; email: string; role: string }[] }) {
   return (
     <div className="space-y-4">
       <div>
@@ -666,7 +677,19 @@ function Step3Engagement({ formData, updateFormData, toggleService }: { formData
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div><Label>Engagement Start Date</Label><Input className="mt-1" type="date" value={formData.engagementStartDate} onChange={(e) => updateFormData("engagementStartDate", e.target.value)} /></div>
-        <div><Label>Primary CPA / Manager</Label><Input className="mt-1" value={formData.primaryAccountManager} onChange={(e) => updateFormData("primaryAccountManager", e.target.value)} /></div>
+        <div>
+          <Label>Primary CPA / Manager</Label>
+          <Select value={formData.primaryAccountManager} onValueChange={(v) => updateFormData("primaryAccountManager", v)}>
+            <SelectTrigger className="mt-1"><SelectValue placeholder="Select manager" /></SelectTrigger>
+            <SelectContent>
+              {managers.map((m) => (
+                <SelectItem key={m.id} value={m.id}>
+                  {m.name || m.email} ({m.role === "PARTNER" ? "Partner" : "Manager"})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
         <div>
           <Label>Billing Preference</Label>
           <Select value={formData.billingPreference} onValueChange={(v) => updateFormData("billingPreference", v as BillingPreference)}>

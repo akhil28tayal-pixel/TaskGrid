@@ -1,5 +1,6 @@
 export const dynamic = "force-dynamic";
 
+import Link from "next/link";
 import {
   Users,
   FolderKanban,
@@ -48,10 +49,10 @@ export default async function DashboardPage() {
   ]);
 
   const stats = [
-    { name: "Active Clients", value: dashboardStats.activeClients.toString(), icon: Users },
-    { name: "Active Projects", value: dashboardStats.activeProjects.toString(), icon: FolderKanban },
-    { name: "Client Requests", value: (dashboardStats.pendingRequests || 0).toString(), icon: MessageSquareMore },
-    { name: "Due This Week", value: dashboardStats.dueThisWeek.toString(), icon: Clock },
+    { name: "Active Clients", value: dashboardStats.activeClients.toString(), icon: Users, href: "/clients" },
+    { name: "Active Projects", value: dashboardStats.activeProjects.toString(), icon: FolderKanban, href: "/projects" },
+    { name: "Client Requests", value: (dashboardStats.pendingRequests || 0).toString(), icon: MessageSquareMore, href: "/client-requests" },
+    { name: "Due This Week", value: dashboardStats.dueThisWeek.toString(), icon: Clock, href: "/projects" },
   ];
 
   return (
@@ -68,39 +69,42 @@ export default async function DashboardPage() {
       {/* Stats Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat) => (
-          <Card key={stat.name}>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-500">{stat.name}</p>
-                  <p className="text-3xl font-bold">{stat.value}</p>
+          <Link key={stat.name} href={stat.href}>
+            <Card className="cursor-pointer transition-all hover:shadow-md hover:border-blue-200">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">{stat.name}</p>
+                    <p className="text-3xl font-bold">{stat.value}</p>
+                  </div>
+                  <div className="rounded-full bg-primary/10 p-3">
+                    <stat.icon className="h-6 w-6 text-primary" />
+                  </div>
                 </div>
-                <div className="rounded-full bg-primary/10 p-3">
-                  <stat.icon className="h-6 w-6 text-primary" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </Link>
         ))}
       </div>
 
       {/* Main Content Grid */}
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Recent Projects */}
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Recent Projects</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {recentProjects.length === 0 ? (
-              <p className="text-sm text-gray-500 text-center py-8">No projects yet</p>
-            ) : (
-              <div className="space-y-4">
-                {recentProjects.map((project) => (
-                  <div
-                    key={project.id}
-                    className="flex items-center justify-between rounded-lg border p-4"
-                  >
+        <Link href="/projects" className="lg:col-span-2">
+          <Card className="cursor-pointer transition-all hover:shadow-md hover:border-blue-200 h-[380px] flex flex-col">
+            <CardHeader>
+              <CardTitle>Recent Projects</CardTitle>
+            </CardHeader>
+            <CardContent className="flex-1 overflow-hidden">
+              {recentProjects.length === 0 ? (
+                <p className="text-sm text-gray-500 text-center py-8">No projects yet</p>
+              ) : (
+                <div className="space-y-4">
+                  {recentProjects.slice(0, 5).map((project) => (
+                    <div
+                      key={project.id}
+                      className="flex items-center justify-between rounded-lg border p-4 hover:bg-slate-50 transition-colors"
+                    >
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
                         <h3 className="font-medium">{project.name}</h3>
@@ -124,27 +128,29 @@ export default async function DashboardPage() {
             )}
           </CardContent>
         </Card>
+        </Link>
 
         {/* Sidebar */}
-        <div className="space-y-6">
+        <div className="flex flex-col gap-5">
           {/* Pending Documents */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <AlertCircle className="h-5 w-5 text-orange-500" />
-                Pending Documents
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {pendingDocuments.length === 0 ? (
-                <p className="text-sm text-gray-500 text-center py-4">No pending documents</p>
-              ) : (
-                <div className="space-y-3">
-                  {pendingDocuments.map((doc) => (
-                    <div
-                      key={doc.id}
-                      className="flex items-center justify-between rounded-lg bg-orange-50 p-3"
-                    >
+          <Link href="/documents" className="flex-1">
+            <Card className="cursor-pointer transition-all hover:shadow-md hover:border-blue-200 h-[180px] flex flex-col">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <AlertCircle className="h-5 w-5 text-orange-500" />
+                  Pending Documents
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="flex-1 overflow-hidden">
+                {pendingDocuments.length === 0 ? (
+                  <p className="text-sm text-gray-500 text-center py-4">No pending documents</p>
+                ) : (
+                  <div className="space-y-3">
+                    {pendingDocuments.slice(0, 5).map((doc) => (
+                      <div
+                        key={doc.id}
+                        className="flex items-center justify-between rounded-lg bg-orange-50 p-3"
+                      >
                       <div className="flex items-center gap-3">
                         <Avatar className="h-8 w-8">
                           <AvatarFallback className="text-xs">
@@ -160,41 +166,44 @@ export default async function DashboardPage() {
                         {doc.daysOverdue}d overdue
                       </Badge>
                     </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </Link>
 
           {/* Upcoming Deadlines */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Clock className="h-5 w-5 text-blue-500" />
-                Upcoming Deadlines
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {upcomingDeadlines.length === 0 ? (
-                <p className="text-sm text-gray-500 text-center py-4">No upcoming deadlines</p>
-              ) : (
-                <div className="space-y-3">
-                  {upcomingDeadlines.map((deadline) => (
-                    <div
-                      key={deadline.id}
-                      className="flex items-center justify-between border-b pb-3 last:border-0 last:pb-0"
-                    >
+          <Link href="/projects" className="flex-1">
+            <Card className="cursor-pointer transition-all hover:shadow-md hover:border-blue-200 h-[180px] flex flex-col">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Clock className="h-5 w-5 text-blue-500" />
+                  Upcoming Deadlines
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="flex-1 overflow-hidden">
+                {upcomingDeadlines.length === 0 ? (
+                  <p className="text-sm text-gray-500 text-center py-4">No upcoming deadlines</p>
+                ) : (
+                  <div className="space-y-3">
+                    {upcomingDeadlines.slice(0, 5).map((deadline) => (
+                      <div
+                        key={deadline.id}
+                        className="flex items-center justify-between border-b pb-3 last:border-0 last:pb-0"
+                      >
                       <div>
                         <p className="text-sm font-medium">{deadline.name}</p>
                         <p className="text-xs text-gray-500">{deadline.client}</p>
                       </div>
-                      <p className="text-sm font-medium text-blue-600">{deadline.date}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                        <p className="text-sm font-medium text-blue-600">{deadline.date}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </Link>
         </div>
       </div>
     </div>
