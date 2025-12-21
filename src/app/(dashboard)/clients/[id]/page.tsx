@@ -2,6 +2,9 @@ import { getClientById } from "@/app/actions/clients";
 import { notFound } from "next/navigation";
 import ClientDetailContent from "@/components/clients/ClientDetailContent";
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 interface ClientDetailPageProps {
   params: { id: string };
 }
