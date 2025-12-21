@@ -4,17 +4,24 @@ import { TemplateEditor } from "@/components/workflows/TemplateEditor";
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
+export const dynamicParams = true;
 
 interface TemplatePageProps {
   params: { id: string };
 }
 
 export default async function TemplatePage({ params }: TemplatePageProps) {
-  const template = await getWorkflowTemplateById(params.id);
+  try {
+    const template = await getWorkflowTemplateById(params.id);
 
-  if (!template) {
+    if (!template) {
+      console.error('Template not found:', params.id);
+      notFound();
+    }
+
+    return <TemplateEditor template={template} />;
+  } catch (error) {
+    console.error('Error loading template:', error);
     notFound();
   }
-
-  return <TemplateEditor template={template} />;
 }
