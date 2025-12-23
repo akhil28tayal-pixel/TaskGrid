@@ -173,7 +173,8 @@ export async function createClient(data: CreateClientInput) {
     };
   } catch (error) {
     console.error("Failed to create client:", error);
-    return { success: false, error: "Failed to create client" };
+    const errorMessage = error instanceof Error ? error.message : "Failed to create client";
+    return { success: false, error: errorMessage };
   }
 }
 
@@ -436,7 +437,6 @@ export async function updateClient(clientId: string, data: Partial<CreateClientI
         fiscalYearStartMonth: data.fiscalYearStartMonth,
         tags: data.tags,
         internalNotes: data.internalNotes || null,
-        riskRating: data.riskRating ? (data.riskRating as any) : null,
       },
     });
 
