@@ -1,5 +1,27 @@
 {
+  "/_not-found": "app/_not-found.js",
+  "/(auth)/login/page": "app/(auth)/login/page.js",
+  "/(auth)/unauthorized/page": "app/(auth)/unauthorized/page.js",
+  "/api/auth/[...nextauth]/route": "app/api/auth/[...nextauth]/route.js",
+  "/page": "app/page.js",
+  "/(client-portal)/client-dashboard/page": "app/(client-portal)/client-dashboard/page.js",
+  "/(client-portal)/client-login/page": "app/(client-portal)/client-login/page.js",
+  "/(client-portal)/client-billing/page": "app/(client-portal)/client-billing/page.js",
+  "/(client-portal)/client-setup-password/page": "app/(client-portal)/client-setup-password/page.js",
+  "/(client-portal)/client-documents/page": "app/(client-portal)/client-documents/page.js",
+  "/(client-portal)/client-tasks/page": "app/(client-portal)/client-tasks/page.js",
+  "/(dashboard)/client-requests/page": "app/(dashboard)/client-requests/page.js",
+  "/(dashboard)/clients/[id]/edit/page": "app/(dashboard)/clients/[id]/edit/page.js",
   "/(dashboard)/clients/page": "app/(dashboard)/clients/page.js",
+  "/(dashboard)/billing/page": "app/(dashboard)/billing/page.js",
+  "/(dashboard)/documents/page": "app/(dashboard)/documents/page.js",
+  "/(dashboard)/tasks/page": "app/(dashboard)/tasks/page.js",
   "/(dashboard)/clients/[id]/page": "app/(dashboard)/clients/[id]/page.js",
-  "/(dashboard)/documents/page": "app/(dashboard)/documents/page.js"
+  "/(dashboard)/projects/page": "app/(dashboard)/projects/page.js",
+  "/(dashboard)/projects/[id]/page": "app/(dashboard)/projects/[id]/page.js",
+  "/(dashboard)/workflows/[id]/page": "app/(dashboard)/workflows/[id]/page.js",
+  "/(dashboard)/team/page": "app/(dashboard)/team/page.js",
+  "/(dashboard)/dashboard/page": "app/(dashboard)/dashboard/page.js",
+  "/(dashboard)/timeline/page": "app/(dashboard)/timeline/page.js",
+  "/(dashboard)/workflows/page": "app/(dashboard)/workflows/page.js"
 }

@@ -74,13 +74,6 @@ export function FileUploadModal({
       reader.onload = async (e) => {
         const base64Data = e.target?.result as string;
 
-          taskId,
-          fileName: selectedFile.name,
-          fileSize: selectedFile.size,
-          mimeType: selectedFile.type,
-          dataLength: base64Data.length,
-        });
-
         try {
           const result = await uploadFileToTask({
             taskId,

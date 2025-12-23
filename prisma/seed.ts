@@ -81,8 +81,6 @@ async function main() {
       status: "ACTIVE",
       servicesRequired: ["TAX_PREPARATION", "BOOKKEEPING"],
       onboardingStatus: "ONBOARDING_COMPLETE",
-      kycAmlStatus: "VERIFIED",
-      engagementLetterSigned: true,
       createdById: partner.id,
     },
   });

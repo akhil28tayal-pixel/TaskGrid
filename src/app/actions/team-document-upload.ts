@@ -43,11 +43,6 @@ export async function teamUploadDocumentForClient(input: TeamUploadDocumentInput
       return { success: false, error: "Task not found" };
     }
 
-      taskId: input.taskId,
-      fileName: input.fileName,
-      fileSize: input.fileSize,
-    });
-
     // Create document record
     const document = await prisma.document.create({
       data: {
