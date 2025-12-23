@@ -14,6 +14,11 @@ interface ShareholderInput {
   percentageHolding: string;
 }
 
+interface ClientRelationshipInput {
+  relatedClientId: string;
+  relationshipType: string;
+}
+
 interface CreateClientInput {
   clientType: string;
   legalName: string;
@@ -44,7 +49,7 @@ interface CreateClientInput {
   fiscalYearStartMonth: number;
   tags: string[];
   internalNotes: string;
-  riskRating: string;
+  clientRelationships: ClientRelationshipInput[];
 }
 
 export async function createClient(data: CreateClientInput) {
@@ -95,7 +100,6 @@ export async function createClient(data: CreateClientInput) {
         fiscalYearStartMonth: data.fiscalYearStartMonth,
         tags: data.tags,
         internalNotes: data.internalNotes || null,
-        riskRating: data.riskRating ? (data.riskRating as any) : null,
         status: "ACTIVE",
         approvalStatus: approvalStatus as any,
         createdById: userId,
@@ -113,6 +117,17 @@ export async function createClient(data: CreateClientInput) {
           sin: sh.sin || null,
           classOfShares: sh.classOfShares || null,
           percentageHolding: sh.percentageHolding ? parseFloat(sh.percentageHolding) : null,
+        })),
+      });
+    }
+
+    // Create client relationships if provided
+    if (data.clientRelationships && data.clientRelationships.length > 0) {
+      await prisma.clientRelationship.createMany({
+        data: data.clientRelationships.map(rel => ({
+          clientId: client.id,
+          relatedClientId: rel.relatedClientId,
+          relationshipType: rel.relationshipType,
         })),
       });
     }

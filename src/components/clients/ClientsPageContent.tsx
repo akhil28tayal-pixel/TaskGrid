@@ -329,6 +329,7 @@ export function ClientsPageContent({ initialClients }: ClientsPageContentProps) 
         onOpenChange={setIsDialogOpen}
         onSubmit={handleCreateClient}
         teamMembers={teamMembers}
+        allClients={clients}
       />
     </div>
   );

@@ -78,7 +78,6 @@ model Client {
   fiscalYearStartMonth   Int?                @default(1)
   tags                   String[]
   internalNotes          String?
-  riskRating             RiskRating?
   status                 ClientStatus        @default(ACTIVE)
   createdAt              DateTime            @default(now())
   updatedAt              DateTime            @updatedAt
@@ -97,6 +96,8 @@ model Client {
   recurringWork          RecurringWork[]
   timeEntries            TimeEntry[]
   shareholders           Shareholder[]
+  relationships          ClientRelationship[] @relation("ClientRelationships")
+  relatedTo              ClientRelationship[] @relation("RelatedClientRelationships")
 }
 
 model Shareholder {
@@ -109,6 +110,19 @@ model Shareholder {
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
   client            Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+}
+
+model ClientRelationship {
+  id               String   @id @default(cuid())
+  clientId         String
+  relatedClientId  String
+  relationshipType String
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  client           Client   @relation("ClientRelationships", fields: [clientId], references: [id], onDelete: Cascade)
+  relatedClient    Client   @relation("RelatedClientRelationships", fields: [relatedClientId], references: [id], onDelete: Cascade)
+
+  @@unique([clientId, relatedClientId])
 }
 
 model ClientContact {

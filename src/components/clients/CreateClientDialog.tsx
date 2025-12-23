@@ -53,6 +53,11 @@ export interface Shareholder {
   percentageHolding: string;
 }
 
+export interface ClientRelationship {
+  relatedClientId: string;
+  relationshipType: string;
+}
+
 export interface ClientFormData {
   clientType: ClientType;
   legalName: string;
@@ -83,7 +88,7 @@ export interface ClientFormData {
   fiscalYearStartMonth: number;
   tags: string[];
   internalNotes: string;
-  riskRating: RiskRating | "";
+  clientRelationships: ClientRelationship[];
 }
 
 const initialFormData: ClientFormData = {
@@ -116,7 +121,7 @@ const initialFormData: ClientFormData = {
   fiscalYearStartMonth: 1,
   tags: [],
   internalNotes: "",
-  riskRating: "",
+  clientRelationships: [],
 };
 
 const STEPS = [
@@ -431,9 +436,10 @@ interface CreateClientDialogProps {
   onOpenChange: (open: boolean) => void;
   onSubmit: (data: ClientFormData) => Promise<void>;
   teamMembers?: TeamMember[];
+  allClients?: any[];
 }
 
-export function CreateClientDialog({ open, onOpenChange, onSubmit, teamMembers = [] }: CreateClientDialogProps) {
+export function CreateClientDialog({ open, onOpenChange, onSubmit, teamMembers = [], allClients = [] }: CreateClientDialogProps) {
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<ClientFormData>(initialFormData);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -529,7 +535,7 @@ export function CreateClientDialog({ open, onOpenChange, onSubmit, teamMembers =
           {currentStep === 3 && <Step3Engagement formData={formData} updateFormData={updateFormData} toggleService={toggleService} managers={managers} />}
           {currentStep === 4 && <Step4ShareholderInfo formData={formData} updateFormData={updateFormData} />}
           {currentStep === 5 && <Step5Accounting formData={formData} updateFormData={updateFormData} />}
-          {currentStep === 6 && <Step6Notes formData={formData} updateFormData={updateFormData} tagInput={tagInput} setTagInput={setTagInput} addTag={addTag} removeTag={removeTag} />}
+          {currentStep === 6 && <Step6Notes formData={formData} updateFormData={updateFormData} tagInput={tagInput} setTagInput={setTagInput} addTag={addTag} removeTag={removeTag} allClients={allClients} />}
         </div>
 
         {/* Footer */}
@@ -892,7 +898,35 @@ function Step5Accounting({ formData, updateFormData }: { formData: ClientFormDat
   );
 }
 
-function Step6Notes({ formData, updateFormData, tagInput, setTagInput, addTag, removeTag }: { formData: ClientFormData; updateFormData: <K extends keyof ClientFormData>(field: K, value: ClientFormData[K]) => void; tagInput: string; setTagInput: (v: string) => void; addTag: () => void; removeTag: (t: string) => void }) {
+function Step6Notes({ formData, updateFormData, tagInput, setTagInput, addTag, removeTag, allClients }: { formData: ClientFormData; updateFormData: <K extends keyof ClientFormData>(field: K, value: ClientFormData[K]) => void; tagInput: string; setTagInput: (v: string) => void; addTag: () => void; removeTag: (t: string) => void; allClients: any[] }) {
+  const [isAddingRelationship, setIsAddingRelationship] = React.useState(false);
+  const [selectedClient, setSelectedClient] = React.useState("");
+  const [relationshipType, setRelationshipType] = React.useState("");
+
+  const addRelationship = () => {
+    if (!selectedClient || !relationshipType.trim()) {
+      alert("Please select a client and enter relationship type");
+      return;
+    }
+    updateFormData("clientRelationships", [
+      ...formData.clientRelationships,
+      { relatedClientId: selectedClient, relationshipType: relationshipType.trim() }
+    ]);
+    setIsAddingRelationship(false);
+    setSelectedClient("");
+    setRelationshipType("");
+  };
+
+  const removeRelationship = (index: number) => {
+    const updated = formData.clientRelationships.filter((_, i) => i !== index);
+    updateFormData("clientRelationships", updated);
+  };
+
+  const getClientName = (clientId: string) => {
+    const client = allClients.find(c => c.id === clientId);
+    return client ? client.legalName : "Unknown Client";
+  };
+
   return (
     <div className="space-y-4">
       <div>
@@ -916,12 +950,87 @@ function Step6Notes({ formData, updateFormData, tagInput, setTagInput, addTag, r
         <Label>Internal Notes</Label>
         <Textarea className="mt-1" value={formData.internalNotes} onChange={(e) => updateFormData("internalNotes", e.target.value)} placeholder="Notes visible only to staff..." rows={4} />
       </div>
+      
+      {/* Client Relationships */}
       <div>
-        <Label>Risk Rating</Label>
-        <Select value={formData.riskRating} onValueChange={(v) => updateFormData("riskRating", v as RiskRating)}>
-          <SelectTrigger className="mt-1"><SelectValue placeholder="Select risk rating" /></SelectTrigger>
-          <SelectContent>{RISK_RATINGS.map((r) => <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>)}</SelectContent>
-        </Select>
+        <div className="flex items-center justify-between mb-2">
+          <Label>Client Relationships</Label>
+          {!isAddingRelationship && (
+            <Button type="button" onClick={() => setIsAddingRelationship(true)} variant="outline" size="sm">
+              + Add Relationship
+            </Button>
+          )}
+        </div>
+
+        {/* List of added relationships */}
+        {formData.clientRelationships.length > 0 && (
+          <div className="space-y-2 mb-3">
+            {formData.clientRelationships.map((rel, index) => (
+              <div key={index} className="flex items-center justify-between p-3 border rounded-lg bg-gray-50">
+                <div className="text-sm">
+                  <span className="font-medium">{getClientName(rel.relatedClientId)}</span>
+                  <span className="text-gray-600 ml-2">• {rel.relationshipType}</span>
+                </div>
+                <Button
+                  type="button"
+                  onClick={() => removeRelationship(index)}
+                  variant="ghost"
+                  size="sm"
+                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Add relationship form */}
+        {isAddingRelationship && (
+          <div className="border rounded-lg p-4 space-y-3 bg-blue-50">
+            <div>
+              <Label>Select Related Client</Label>
+              <Select value={selectedClient} onValueChange={setSelectedClient}>
+                <SelectTrigger className="mt-1">
+                  <SelectValue placeholder="Select a client" />
+                </SelectTrigger>
+                <SelectContent>
+                  {allClients.map((client) => (
+                    <SelectItem key={client.id} value={client.id}>
+                      {client.legalName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Relationship</Label>
+              <Input
+                value={relationshipType}
+                onChange={(e) => setRelationshipType(e.target.value)}
+                placeholder="e.g., Parent Company, Subsidiary, Partner"
+                className="mt-1"
+              />
+            </div>
+            <div className="flex gap-2 pt-2">
+              <Button type="button" onClick={addRelationship} className="flex-1">
+                Save
+              </Button>
+              <Button
+                type="button"
+                onClick={() => {
+                  setIsAddingRelationship(false);
+                  setSelectedClient("");
+                  setRelationshipType("");
+                }}
+                variant="outline"
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
