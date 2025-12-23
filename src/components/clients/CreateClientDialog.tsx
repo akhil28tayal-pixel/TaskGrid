@@ -722,6 +722,9 @@ function Step4ShareholderInfo({ formData, updateFormData }: { formData: ClientFo
     percentageHolding: ""
   });
 
+  // Only show shareholder section for business clients
+  const isIndividual = formData.clientType === "INDIVIDUAL";
+
   const startAdding = () => {
     setIsAdding(true);
     setCurrentShareholder({ name: "", sin: "", classOfShares: "", percentageHolding: "" });
@@ -750,6 +753,15 @@ function Step4ShareholderInfo({ formData, updateFormData }: { formData: ClientFo
   const updateCurrentShareholder = (field: keyof Shareholder, value: string) => {
     setCurrentShareholder({ ...currentShareholder, [field]: value });
   };
+
+  if (isIndividual) {
+    return (
+      <div className="text-center py-12 text-gray-500">
+        <p className="text-lg">Shareholder information is not applicable for individual clients.</p>
+        <p className="text-sm mt-2">This section is only for business entities.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
