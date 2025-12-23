@@ -330,6 +330,16 @@ export async function getClientById(clientId: string) {
       return { success: false, error: "Client not found" };
     }
 
+    // Get manager name if primaryAccountManager is set
+    let managerName = null;
+    if (client.primaryAccountManager) {
+      const manager = await prisma.user.findUnique({
+        where: { id: client.primaryAccountManager },
+        select: { name: true },
+      });
+      managerName = manager?.name || null;
+    }
+
     // Calculate summary stats
     const openTasks = client.projects.flatMap(p => p.tasks).filter(t => t.status !== "COMPLETED" && t.status !== "CANCELLED");
     const upcomingDeadlines = openTasks
@@ -344,6 +354,7 @@ export async function getClientById(clientId: string) {
       success: true,
       client: {
         ...client,
+        primaryAccountManager: managerName,
         stats: {
           openTasksCount: openTasks.length,
           pendingDocsCount: pendingDocs.length,
