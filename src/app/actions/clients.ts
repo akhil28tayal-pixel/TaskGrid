@@ -351,6 +351,46 @@ export async function getClientById(clientId: string) {
       managerName = manager?.name || null;
     }
 
+    // Fetch inverse relationships (where this client is the relatedClient)
+    const inverseRelationships = await prisma.clientRelationship.findMany({
+      where: { relatedClientId: clientId },
+      include: {
+        client: {
+          select: {
+            id: true,
+            legalName: true,
+            preferredName: true,
+          },
+        },
+      },
+    });
+
+    // Helper function to get inverse relationship type
+    const getInverseRelationshipType = (type: string): string => {
+      const inverseMap: Record<string, string> = {
+        "Parent Company": "Subsidiary",
+        "Subsidiary": "Parent Company",
+        "Partner": "Partner",
+        "Affiliate": "Affiliate",
+        "Sister Company": "Sister Company",
+      };
+      return inverseMap[type] || type;
+    };
+
+    // Combine both directions of relationships
+    const allRelationships = [
+      ...client.relationships.map(rel => ({
+        id: rel.id,
+        relationshipType: rel.relationshipType,
+        relatedClient: rel.relatedClient,
+      })),
+      ...inverseRelationships.map(rel => ({
+        id: rel.id,
+        relationshipType: getInverseRelationshipType(rel.relationshipType),
+        relatedClient: rel.client,
+      })),
+    ];
+
     // Calculate summary stats
     const openTasks = client.projects.flatMap(p => p.tasks).filter(t => t.status !== "COMPLETED" && t.status !== "CANCELLED");
     const upcomingDeadlines = openTasks
@@ -366,6 +406,7 @@ export async function getClientById(clientId: string) {
       client: {
         ...client,
         primaryAccountManager: managerName,
+        relationships: allRelationships,
         stats: {
           openTasksCount: openTasks.length,
           pendingDocsCount: pendingDocs.length,
