@@ -27,7 +27,6 @@ export async function deleteTaskDocuments(taskId: string) {
       },
     });
 
-    console.log(`✅ Deleted ${result.count} documents for task ${taskId}`);
 
     return { success: true, deletedCount: result.count };
   } catch (error) {

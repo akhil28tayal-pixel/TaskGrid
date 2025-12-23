@@ -155,7 +155,6 @@ export async function createClient(data: CreateClientInput) {
     if (!emailResult.success) {
       console.warn("Failed to send portal invite email, but client was created:", emailResult.error);
     }
-    console.log(`📧 Client portal setup link for ${data.primaryEmail}: ${setupLink}`);
     
     revalidatePath("/clients");
     revalidatePath("/dashboard");

@@ -19,7 +19,6 @@ interface UploadFileToTaskInput {
  */
 export async function uploadFileToTask(input: UploadFileToTaskInput) {
   try {
-    console.log("📤 Starting file upload for task:", input.taskId);
     
     const session = await getServerSession(authOptions);
     if (!session?.user) {
@@ -33,7 +32,6 @@ export async function uploadFileToTask(input: UploadFileToTaskInput) {
       return { success: false, error: "Client ID not found" };
     }
 
-    console.log("✅ Client authenticated:", clientId);
 
     // Verify the task belongs to this client
     const task = await prisma.task.findUnique({
@@ -55,7 +53,6 @@ export async function uploadFileToTask(input: UploadFileToTaskInput) {
       return { success: false, error: "Access denied" };
     }
 
-    console.log("✅ Task verified, creating document...");
 
     // Create document record
     const document = await prisma.document.create({
@@ -74,19 +71,15 @@ export async function uploadFileToTask(input: UploadFileToTaskInput) {
       },
     });
 
-    console.log("✅ Document created:", document.id);
 
     // Note: Task completion is handled by team members, not automatically on upload
-    console.log("✅ Document uploaded (task status unchanged - team will mark complete)");
 
     // Note: Activity log requires a User ID, not Client ID
     // Client uploads are tracked via the Document record instead
-    console.log("✅ Document upload tracked (activity log skipped for client uploads)");
 
     revalidatePath("/client-tasks");
     revalidatePath("/client-dashboard");
 
-    console.log("✅ File upload completed successfully");
 
     return { success: true, document };
   } catch (error) {

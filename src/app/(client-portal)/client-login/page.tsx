@@ -21,7 +21,6 @@ export default function ClientLoginPage() {
     setIsLoading(true);
 
     try {
-      console.log("Attempting client login with:", email);
       const result = await signIn("client-credentials", {
         email,
         password,
@@ -29,17 +28,14 @@ export default function ClientLoginPage() {
         callbackUrl: "/client-dashboard",
       });
 
-      console.log("SignIn result:", result);
 
       if (result?.error) {
         console.error("Login error:", result.error);
         setError("Invalid email or password");
         setIsLoading(false);
       } else if (result?.ok) {
-        console.log("Login successful, waiting for session...");
         // Wait a bit for the session to be set
         await new Promise(resolve => setTimeout(resolve, 500));
-        console.log("Redirecting to client dashboard");
         window.location.href = "/client-dashboard";
       }
     } catch (err) {

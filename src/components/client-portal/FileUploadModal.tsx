@@ -74,7 +74,6 @@ export function FileUploadModal({
       reader.onload = async (e) => {
         const base64Data = e.target?.result as string;
 
-        console.log("📤 Uploading file:", {
           taskId,
           fileName: selectedFile.name,
           fileSize: selectedFile.size,
@@ -91,10 +90,8 @@ export function FileUploadModal({
             mimeType: selectedFile.type,
           });
 
-          console.log("Upload result:", result);
 
           if (result.success) {
-            console.log("✅ Upload successful!");
             onUploadSuccess();
             onClose();
             setSelectedFile(null);

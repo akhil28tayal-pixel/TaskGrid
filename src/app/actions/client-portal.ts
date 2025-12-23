@@ -397,7 +397,6 @@ export async function resendPasswordSetupEmail(clientId: string) {
     const setupLink = `${process.env.NEXTAUTH_URL}/client-setup-password?token=${passwordSetupToken}`;
     
     // TODO: Send actual email
-    console.log(`📧 Resent portal setup link for ${portalAccess.email}: ${setupLink}`);
 
     return { success: true, setupLink };
   } catch (error) {

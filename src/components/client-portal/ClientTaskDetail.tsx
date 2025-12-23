@@ -69,10 +69,8 @@ export function ClientTaskDetail({ task, onClose, onUploadSuccess }: ClientTaskD
       setTeamDocuments(teamDocsResult.documents || []);
     }
     if (attachmentsResult.success) {
-      console.log("📎 Task attachments fetched:", attachmentsResult.attachments);
       setAttachments(attachmentsResult.attachments || []);
     }
-    console.log("📊 Data loaded - Documents:", documents.length, "Team Docs:", teamDocuments.length, "Attachments:", attachmentsResult.attachments?.length || 0);
     setIsLoading(false);
   };
 

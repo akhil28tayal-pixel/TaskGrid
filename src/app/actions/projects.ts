@@ -304,7 +304,6 @@ export async function createProject(data: CreateProjectInput) {
             // Automatically send notification if it's a CLIENT_REQUEST task
             if (templateTask.taskType === "CLIENT_REQUEST") {
               await sendTaskNotificationToClient(newTask.id);
-              console.log(`✅ Auto-notification sent for CLIENT_REQUEST task: ${newTask.id}`);
             }
 
             // Create subtasks
@@ -539,13 +538,11 @@ export async function addProjectTask(
           })
         )
       );
-      console.log(`✅ Added ${data.attachments.length} attachments to task ${newTask.id}`);
     }
 
     // Automatically send notification if it's a CLIENT_REQUEST task
     if (data.taskType === "CLIENT_REQUEST") {
       await sendTaskNotificationToClient(newTask.id);
-      console.log(`✅ Auto-notification sent for CLIENT_REQUEST task: ${newTask.id}`);
     }
 
     revalidatePath(`/projects/${projectId}`);
@@ -625,7 +622,6 @@ export async function deleteProjectTask(taskId: string) {
           taskId: taskId,
         },
       });
-      console.log(`✅ Deleted documents for task ${taskId}`);
     }
 
     // Delete the task

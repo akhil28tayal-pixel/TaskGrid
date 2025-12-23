@@ -257,7 +257,6 @@ export function ProjectEditor({ project, userRole = "ASSOCIATE" }: ProjectEditor
     try {
       // Tasks are already saved to database as they're created
       // Just redirect back to projects page
-      console.log("Project saved with sections:", sections);
       
       setHasChanges(false);
       router.push("/projects");
@@ -691,7 +690,6 @@ export function ProjectEditor({ project, userRole = "ASSOCIATE" }: ProjectEditor
     }> = [];
 
     if (taskData.attachedFiles && taskData.attachedFiles.length > 0) {
-      console.log(" Converting", taskData.attachedFiles.length, "files to base64...");
       
       const filePromises = taskData.attachedFiles.map((file) => {
         return new Promise<{
@@ -716,7 +714,6 @@ export function ProjectEditor({ project, userRole = "ASSOCIATE" }: ProjectEditor
 
       try {
         attachments = await Promise.all(filePromises);
-        console.log(" Files converted successfully");
       } catch (error) {
         console.error(" Failed to convert files:", error);
         alert("Failed to process file attachments");
@@ -749,7 +746,6 @@ export function ProjectEditor({ project, userRole = "ASSOCIATE" }: ProjectEditor
         )
       );
       
-      console.log(" Task created with", attachments.length, "attachments");
     } else {
       alert("Failed to add task: " + (result.error || "Unknown error"));
     }

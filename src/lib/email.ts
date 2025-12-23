@@ -24,8 +24,6 @@ export async function sendEmail({ to, subject, html, text }: SendEmailOptions) {
   try {
     // Check if email is configured
     if (!process.env.SMTP_USER || !process.env.SMTP_PASSWORD) {
-      console.log("📧 Email not configured. Would send to:", to);
-      console.log("   Subject:", subject);
       return { success: true, message: "Email skipped - SMTP not configured" };
     }
 
@@ -38,7 +36,6 @@ export async function sendEmail({ to, subject, html, text }: SendEmailOptions) {
       text: text || html.replace(/<[^>]*>/g, ""),
     });
 
-    console.log("📧 Email sent:", info.messageId);
     return { success: true, messageId: info.messageId };
   } catch (error) {
     console.error("Failed to send email:", error);

@@ -66,31 +66,25 @@ export default function ClientDashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    console.log("Client Dashboard - Status:", status);
-    console.log("Client Dashboard - Session:", session);
     
     if (status === "loading") {
       return; // Wait for session to load
     }
     
     if (status === "unauthenticated") {
-      console.log("Unauthenticated - redirecting to login");
       router.push("/client-login");
       return;
     }
     
     if (status === "authenticated") {
       const userType = (session?.user as any)?.userType;
-      console.log("Client Dashboard - User Type:", userType);
       
       // Only redirect to team dashboard if explicitly a team member
       if (userType && userType !== "client") {
-        console.log("Redirecting to team dashboard - not a client");
         router.push("/dashboard");
         return;
       }
       
-      console.log("Loading dashboard data...");
       loadDashboardData();
     }
   }, [status, session, router]);

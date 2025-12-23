@@ -123,7 +123,6 @@ export async function sendTaskNotificationToClient(taskId: string) {
     revalidatePath("/client-dashboard");
     revalidatePath("/client-tasks");
 
-    console.log(`✅ Task notification sent to ${clientEmail} for task: ${task.title}`);
 
     return { success: true, message: "Notification sent successfully" };
   } catch (error) {

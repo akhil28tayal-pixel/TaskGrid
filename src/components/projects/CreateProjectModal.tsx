@@ -179,14 +179,11 @@ export function CreateProjectModal({ open, onOpenChange }: CreateProjectModalPro
   }
 
   async function handleCreate() {
-    console.log("handleCreate called", { projectName, clientId });
     if (!projectName.trim() || !clientId) {
-      console.log("Validation failed", { projectName: projectName.trim(), clientId });
       return;
     }
 
     setIsSubmitting(true);
-    console.log("Submitting project...");
     try {
       const projectData = {
         name: projectName,
@@ -197,13 +194,10 @@ export function CreateProjectModal({ open, onOpenChange }: CreateProjectModalPro
         assigneeIds: selectedAssignees.length > 0 ? selectedAssignees : undefined,
         templateId: selectedTemplateId || undefined,
       };
-      console.log("Project data:", projectData);
       
       const result = await createProject(projectData);
-      console.log("Create result:", result);
 
       if (result.success && result.project) {
-        console.log("Project created successfully!");
         handleClose();
         router.push(`/projects/${result.project.id}`);
       } else {
@@ -546,7 +540,6 @@ export function CreateProjectModal({ open, onOpenChange }: CreateProjectModalPro
               <Button
                 type="button"
                 onClick={() => {
-                  console.log("Create clicked", { projectName, clientId, isSubmitting });
                   handleCreate();
                 }}
                 disabled={!projectName.trim() || !clientId || isSubmitting}

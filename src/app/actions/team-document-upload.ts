@@ -43,7 +43,6 @@ export async function teamUploadDocumentForClient(input: TeamUploadDocumentInput
       return { success: false, error: "Task not found" };
     }
 
-    console.log("📤 Team uploading document for client:", {
       taskId: input.taskId,
       fileName: input.fileName,
       fileSize: input.fileSize,
@@ -68,7 +67,6 @@ export async function teamUploadDocumentForClient(input: TeamUploadDocumentInput
       },
     });
 
-    console.log("✅ Document created for client:", document.id);
 
     // Create notification for client (only if client exists)
     if (task.project?.clientId) {
@@ -89,9 +87,7 @@ export async function teamUploadDocumentForClient(input: TeamUploadDocumentInput
               actionUrl: "/client-tasks",
             },
           });
-          console.log("✅ Notification created for client");
         } else {
-          console.log("⚠️ Client not found, skipping notification");
         }
       } catch (notifError) {
         console.error("⚠️ Failed to create notification (non-critical):", notifError);
@@ -209,7 +205,6 @@ export async function deleteTeamDocument(documentId: string) {
     }
     revalidatePath("/client-tasks");
 
-    console.log("✅ Team document deleted:", documentId);
 
     return { success: true };
   } catch (error) {
@@ -244,7 +239,6 @@ export async function submitTaskAnswer(taskId: string, answer: string) {
     revalidatePath("/client-tasks");
     revalidatePath(`/projects/${task.projectId}`);
 
-    console.log("✅ Client answered question for task:", taskId);
 
     return { success: true, task };
   } catch (error) {
