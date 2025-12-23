@@ -924,7 +924,7 @@ function Step6Notes({ formData, updateFormData, tagInput, setTagInput, addTag, r
 
   const getClientName = (clientId: string) => {
     const client = allClients.find(c => c.id === clientId);
-    return client ? client.legalName : "Unknown Client";
+    return client ? (client.legalName || client.name || client.company || "Unknown Client") : "Unknown Client";
   };
 
   return (
@@ -995,11 +995,15 @@ function Step6Notes({ formData, updateFormData, tagInput, setTagInput, addTag, r
                   <SelectValue placeholder="Select a client" />
                 </SelectTrigger>
                 <SelectContent>
-                  {allClients.map((client) => (
-                    <SelectItem key={client.id} value={client.id}>
-                      {client.legalName}
-                    </SelectItem>
-                  ))}
+                  {allClients.length === 0 ? (
+                    <div className="p-2 text-sm text-gray-500">No clients available</div>
+                  ) : (
+                    allClients.map((client) => (
+                      <SelectItem key={client.id} value={client.id}>
+                        {client.legalName || client.name || client.company || "Unknown Client"}
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
             </div>

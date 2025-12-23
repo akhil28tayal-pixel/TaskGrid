@@ -1,7 +1,7 @@
 {
-  "/(client-portal)/client-dashboard/page": "app/(client-portal)/client-dashboard/page.js",
-  "/(dashboard)/clients/page": "app/(dashboard)/clients/page.js",
   "/(dashboard)/clients/[id]/page": "app/(dashboard)/clients/[id]/page.js",
+  "/(client-portal)/client-dashboard/page": "app/(client-portal)/client-dashboard/page.js",
   "/(client-portal)/client-tasks/page": "app/(client-portal)/client-tasks/page.js",
+  "/(dashboard)/clients/page": "app/(dashboard)/clients/page.js",
   "/(dashboard)/dashboard/page": "app/(dashboard)/dashboard/page.js"
 }
