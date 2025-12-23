@@ -57,15 +57,10 @@ export default function EditClientPage({ params }: EditClientPageProps) {
     primaryAccountManager: "",
     billingPreference: "MONTHLY",
     onboardingStatus: "PENDING_DOCS",
-    kycAmlStatus: "NOT_STARTED",
-    governmentIdUploaded: false,
-    businessDocsUploaded: false,
-    engagementLetterSigned: false,
     accountingSoftware: "",
     fiscalYearStartMonth: 1,
     tags: [] as string[],
     internalNotes: "",
-    riskRating: "",
   });
 
   useEffect(() => {
@@ -102,15 +97,10 @@ export default function EditClientPage({ params }: EditClientPageProps) {
           primaryAccountManager: client.primaryAccountManager || "",
           billingPreference: client.billingPreference || "MONTHLY",
           onboardingStatus: client.onboardingStatus || "PENDING_DOCS",
-          kycAmlStatus: client.kycAmlStatus || "NOT_STARTED",
-          governmentIdUploaded: client.governmentIdUploaded ?? false,
-          businessDocsUploaded: client.businessDocsUploaded ?? false,
-          engagementLetterSigned: client.engagementLetterSigned ?? false,
           accountingSoftware: client.accountingSoftware || "",
           fiscalYearStartMonth: client.fiscalYearStartMonth || 1,
           tags: client.tags || [],
           internalNotes: client.internalNotes || "",
-          riskRating: client.riskRating || "",
         });
       } else {
         setError("Client not found");
