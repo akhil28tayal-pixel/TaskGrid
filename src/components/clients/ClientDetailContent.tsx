@@ -99,11 +99,6 @@ interface Client {
   servicesRequired: string[];
   primaryAccountManager: string | null;
   onboardingStatus: string;
-  kycAmlStatus: string;
-  governmentIdUploaded: boolean;
-  businessDocsUploaded: boolean;
-  engagementLetterSigned: boolean;
-  riskRating: string | null;
   internalNotes: string | null;
   tags: string[];
   createdAt: Date;
@@ -167,30 +162,6 @@ const getServiceLabel = (service: string) => {
   return labels[service] || service;
 };
 
-const getRiskColor = (risk: string | null) => {
-  if (!risk) return "bg-gray-100 text-gray-600";
-  const colors: Record<string, string> = {
-    LOW: "bg-green-100 text-green-800",
-    MEDIUM: "bg-yellow-100 text-yellow-800",
-    HIGH: "bg-orange-100 text-orange-800",
-    CRITICAL: "bg-red-100 text-red-800",
-  };
-  return colors[risk] || "bg-gray-100 text-gray-600";
-};
-
-const getKycStatusIcon = (status: string) => {
-  switch (status) {
-    case "VERIFIED":
-      return <CheckCircle2 className="h-4 w-4 text-green-600" />;
-    case "IN_PROGRESS":
-      return <Clock className="h-4 w-4 text-yellow-600" />;
-    case "FAILED":
-    case "EXPIRED":
-      return <XCircle className="h-4 w-4 text-red-600" />;
-    default:
-      return <CircleDot className="h-4 w-4 text-gray-400" />;
-  }
-};
 
 export default function ClientDetailContent({ client }: ClientDetailContentProps) {
   const [activeTab, setActiveTab] = useState("overview");
@@ -229,11 +200,6 @@ export default function ClientDetailContent({ client }: ClientDetailContentProps
                     <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(client.status)}`}>
                       {client.status}
                     </span>
-                    {client.riskRating && (
-                      <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${getRiskColor(client.riskRating)}`}>
-                        {client.riskRating} Risk
-                      </span>
-                    )}
                   </div>
                   <p className="text-sm text-gray-500 mt-1">
                     {client.clientType} {client.entityType && `• ${client.entityType.replace("_", " ")}`}
@@ -372,13 +338,6 @@ export default function ClientDetailContent({ client }: ClientDetailContentProps
                       />
                     ))}
                   
-                  {client.engagementLetterSigned && (
-                    <TimelineItem
-                      icon={<CheckCircle2 className="h-4 w-4 text-green-600" />}
-                      title="Engagement Letter Signed"
-                      color="green"
-                    />
-                  )}
                   {client.onboardingStatus === "ONBOARDING_COMPLETE" && (
                     <TimelineItem
                       icon={<CheckCircle2 className="h-4 w-4 text-green-600" />}
@@ -576,99 +535,6 @@ export default function ClientDetailContent({ client }: ClientDetailContentProps
           {/* Compliance Tab */}
           <TabsContent value="compliance">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* KYC/AML Status */}
-              <div className="bg-white rounded-lg shadow-sm border p-6">
-                <h3 className="text-lg font-semibold mb-4">KYC/AML Verification</h3>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      {getKycStatusIcon(client.kycAmlStatus)}
-                      <span className="font-medium">KYC/AML Status</span>
-                    </div>
-                    <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      client.kycAmlStatus === "VERIFIED" ? "bg-green-100 text-green-800" :
-                      client.kycAmlStatus === "IN_PROGRESS" ? "bg-yellow-100 text-yellow-800" :
-                      client.kycAmlStatus === "FAILED" || client.kycAmlStatus === "EXPIRED" ? "bg-red-100 text-red-800" :
-                      "bg-gray-100 text-gray-800"
-                    }`}>
-                      {client.kycAmlStatus.replace("_", " ")}
-                    </span>
-                  </div>
-                  
-                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      {client.governmentIdUploaded ? (
-                        <CheckCircle2 className="h-4 w-4 text-green-600" />
-                      ) : (
-                        <AlertCircle className="h-4 w-4 text-yellow-600" />
-                      )}
-                      <span>Government ID</span>
-                    </div>
-                    <span className={`text-sm font-medium ${client.governmentIdUploaded ? "text-green-600" : "text-yellow-600"}`}>
-                      {client.governmentIdUploaded ? "Uploaded" : "Pending"}
-                    </span>
-                  </div>
-                  
-                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      {client.businessDocsUploaded ? (
-                        <CheckCircle2 className="h-4 w-4 text-green-600" />
-                      ) : (
-                        <AlertCircle className="h-4 w-4 text-yellow-600" />
-                      )}
-                      <span>Business Documents</span>
-                    </div>
-                    <span className={`text-sm font-medium ${client.businessDocsUploaded ? "text-green-600" : "text-yellow-600"}`}>
-                      {client.businessDocsUploaded ? "Uploaded" : "Pending"}
-                    </span>
-                  </div>
-                  
-                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      {client.engagementLetterSigned ? (
-                        <CheckCircle2 className="h-4 w-4 text-green-600" />
-                      ) : (
-                        <AlertCircle className="h-4 w-4 text-yellow-600" />
-                      )}
-                      <span>Engagement Letter</span>
-                    </div>
-                    <span className={`text-sm font-medium ${client.engagementLetterSigned ? "text-green-600" : "text-yellow-600"}`}>
-                      {client.engagementLetterSigned ? "Signed" : "Pending"}
-                    </span>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Risk Assessment */}
-              <div className="bg-white rounded-lg shadow-sm border p-6">
-                <h3 className="text-lg font-semibold mb-4">Risk Assessment</h3>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <span className="font-medium">Risk Rating</span>
-                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${getRiskColor(client.riskRating)}`}>
-                      {client.riskRating || "Not Assessed"}
-                    </span>
-                  </div>
-                  
-                  {client.riskRating === "HIGH" || client.riskRating === "CRITICAL" ? (
-                    <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-                      <div className="flex items-center gap-2 text-red-800 font-medium mb-2">
-                        <AlertTriangle className="h-4 w-4" />
-                        High Risk Flags
-                      </div>
-                      <ul className="text-sm text-red-700 space-y-1 ml-6 list-disc">
-                        <li>Requires enhanced due diligence</li>
-                        <li>Manager approval required for engagement</li>
-                      </ul>
-                    </div>
-                  ) : (
-                    <div className="text-center py-8 text-gray-500">
-                      <Shield className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                      <p>No risk flags identified</p>
-                    </div>
-                  )}
-                </div>
-              </div>
             </div>
           </TabsContent>
         </Tabs>
