@@ -1,11 +1,7 @@
 {
-  "/api/auth/[...nextauth]/route": "app/api/auth/[...nextauth]/route.js",
-  "/(dashboard)/dashboard/page": "app/(dashboard)/dashboard/page.js",
-  "/(dashboard)/client-requests/page": "app/(dashboard)/client-requests/page.js",
-  "/(dashboard)/clients/[id]/page": "app/(dashboard)/clients/[id]/page.js",
-  "/(dashboard)/projects/page": "app/(dashboard)/projects/page.js",
-  "/(dashboard)/projects/[id]/page": "app/(dashboard)/projects/[id]/page.js",
   "/(client-portal)/client-login/page": "app/(client-portal)/client-login/page.js",
+  "/(client-portal)/client-tasks/page": "app/(client-portal)/client-tasks/page.js",
   "/(client-portal)/client-dashboard/page": "app/(client-portal)/client-dashboard/page.js",
-  "/(client-portal)/client-tasks/page": "app/(client-portal)/client-tasks/page.js"
+  "/(dashboard)/clients/page": "app/(dashboard)/clients/page.js",
+  "/(dashboard)/clients/[id]/page": "app/(dashboard)/clients/[id]/page.js"
 }

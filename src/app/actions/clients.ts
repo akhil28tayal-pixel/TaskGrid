@@ -7,6 +7,13 @@ import { authOptions } from "@/lib/auth";
 import { sendClientPortalInvite } from "@/lib/email";
 
 // Types matching the form data
+interface ShareholderInput {
+  name: string;
+  sin: string;
+  classOfShares: string;
+  percentageHolding: string;
+}
+
 interface CreateClientInput {
   clientType: string;
   legalName: string;
@@ -32,10 +39,7 @@ interface CreateClientInput {
   primaryAccountManager: string;
   billingPreference: string;
   onboardingStatus: string;
-  kycAmlStatus: string;
-  governmentIdUploaded: boolean;
-  businessDocsUploaded: boolean;
-  engagementLetterSigned: boolean;
+  shareholders: ShareholderInput[];
   accountingSoftware: string;
   fiscalYearStartMonth: number;
   tags: string[];
@@ -87,10 +91,6 @@ export async function createClient(data: CreateClientInput) {
         primaryAccountManager: data.primaryAccountManager || null,
         billingPreference: data.billingPreference as any,
         onboardingStatus: data.onboardingStatus as any,
-        kycAmlStatus: data.kycAmlStatus as any,
-        governmentIdUploaded: data.governmentIdUploaded,
-        businessDocsUploaded: data.businessDocsUploaded,
-        engagementLetterSigned: data.engagementLetterSigned,
         accountingSoftware: data.accountingSoftware ? (data.accountingSoftware as any) : null,
         fiscalYearStartMonth: data.fiscalYearStartMonth,
         tags: data.tags,
@@ -103,6 +103,19 @@ export async function createClient(data: CreateClientInput) {
         approvedAt: userRole === "PARTNER" ? new Date() : null,
       },
     });
+
+    // Create shareholders if provided
+    if (data.shareholders && data.shareholders.length > 0) {
+      await prisma.shareholder.createMany({
+        data: data.shareholders.map(sh => ({
+          clientId: client.id,
+          name: sh.name,
+          sin: sh.sin || null,
+          classOfShares: sh.classOfShares || null,
+          percentageHolding: sh.percentageHolding ? parseFloat(sh.percentageHolding) : null,
+        })),
+      });
+    }
 
     // Auto-create client portal access with password setup token
     const passwordSetupToken = `setup_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;

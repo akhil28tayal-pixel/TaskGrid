@@ -46,6 +46,13 @@ type KycAmlStatus = "NOT_STARTED" | "IN_PROGRESS" | "VERIFIED" | "FAILED" | "EXP
 type AccountingSoftware = "QUICKBOOKS_ONLINE" | "QUICKBOOKS_DESKTOP" | "XERO" | "FRESHBOOKS" | "WAVE" | "SAGE" | "ZOHO_BOOKS" | "ERP_SYSTEM" | "NONE" | "OTHER";
 type RiskRating = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
 
+export interface Shareholder {
+  name: string;
+  sin: string;
+  classOfShares: string;
+  percentageHolding: string;
+}
+
 export interface ClientFormData {
   clientType: ClientType;
   legalName: string;
@@ -71,10 +78,7 @@ export interface ClientFormData {
   primaryAccountManager: string;
   billingPreference: BillingPreference;
   onboardingStatus: OnboardingStatus;
-  kycAmlStatus: KycAmlStatus;
-  governmentIdUploaded: boolean;
-  businessDocsUploaded: boolean;
-  engagementLetterSigned: boolean;
+  shareholders: Shareholder[];
   accountingSoftware: AccountingSoftware | "";
   fiscalYearStartMonth: number;
   tags: string[];
@@ -107,10 +111,7 @@ const initialFormData: ClientFormData = {
   primaryAccountManager: "",
   billingPreference: "MONTHLY",
   onboardingStatus: "PENDING_DOCS",
-  kycAmlStatus: "NOT_STARTED",
-  governmentIdUploaded: false,
-  businessDocsUploaded: false,
-  engagementLetterSigned: false,
+  shareholders: [],
   accountingSoftware: "",
   fiscalYearStartMonth: 1,
   tags: [],
@@ -122,7 +123,7 @@ const STEPS = [
   { id: 1, title: "Identification", icon: User },
   { id: 2, title: "Contact", icon: Mail },
   { id: 3, title: "Engagement", icon: Briefcase },
-  { id: 4, title: "Compliance", icon: Shield },
+  { id: 4, title: "Shareholder Info", icon: Shield },
   { id: 5, title: "Accounting", icon: Calculator },
   { id: 6, title: "Notes", icon: FileText },
 ];
@@ -526,7 +527,7 @@ export function CreateClientDialog({ open, onOpenChange, onSubmit, teamMembers =
           {currentStep === 1 && <Step1Identification formData={formData} updateFormData={updateFormData} />}
           {currentStep === 2 && <Step2Contact formData={formData} updateFormData={updateFormData} />}
           {currentStep === 3 && <Step3Engagement formData={formData} updateFormData={updateFormData} toggleService={toggleService} managers={managers} />}
-          {currentStep === 4 && <Step4Compliance formData={formData} updateFormData={updateFormData} />}
+          {currentStep === 4 && <Step4ShareholderInfo formData={formData} updateFormData={updateFormData} />}
           {currentStep === 5 && <Step5Accounting formData={formData} updateFormData={updateFormData} />}
           {currentStep === 6 && <Step6Notes formData={formData} updateFormData={updateFormData} tagInput={tagInput} setTagInput={setTagInput} addTag={addTag} removeTag={removeTag} />}
         </div>
@@ -712,31 +713,105 @@ function Step3Engagement({ formData, updateFormData, toggleService, managers }: 
   );
 }
 
-function Step4Compliance({ formData, updateFormData }: { formData: ClientFormData; updateFormData: <K extends keyof ClientFormData>(field: K, value: ClientFormData[K]) => void }) {
+function Step4ShareholderInfo({ formData, updateFormData }: { formData: ClientFormData; updateFormData: <K extends keyof ClientFormData>(field: K, value: ClientFormData[K]) => void }) {
+  const addShareholder = () => {
+    updateFormData("shareholders", [
+      ...formData.shareholders,
+      { name: "", sin: "", classOfShares: "", percentageHolding: "" }
+    ]);
+  };
+
+  const removeShareholder = (index: number) => {
+    const updated = formData.shareholders.filter((_, i) => i !== index);
+    updateFormData("shareholders", updated);
+  };
+
+  const updateShareholder = (index: number, field: keyof Shareholder, value: string) => {
+    const updated = [...formData.shareholders];
+    updated[index] = { ...updated[index], [field]: value };
+    updateFormData("shareholders", updated);
+  };
+
   return (
     <div className="space-y-4">
-      <div>
-        <Label>KYC/AML Verification Status</Label>
-        <Select value={formData.kycAmlStatus} onValueChange={(v) => updateFormData("kycAmlStatus", v as KycAmlStatus)}>
-          <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-          <SelectContent>{KYC_STATUSES.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}</SelectContent>
-        </Select>
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-medium">Shareholder Information</h3>
+        <Button type="button" onClick={addShareholder} variant="outline" size="sm">
+          + Add Shareholder
+        </Button>
       </div>
-      <div className="border rounded-lg p-4 space-y-3">
-        <h4 className="font-medium">Document Requirements</h4>
-        <div className="flex items-center space-x-2">
-          <Checkbox id="govId" checked={formData.governmentIdUploaded} onCheckedChange={(c) => updateFormData("governmentIdUploaded", c as boolean)} />
-          <Label htmlFor="govId" className="font-normal">Government ID / Business Registration Uploaded</Label>
+
+      {formData.shareholders.length === 0 ? (
+        <div className="text-center py-8 text-gray-500 border-2 border-dashed rounded-lg">
+          <p>No shareholders added yet.</p>
+          <p className="text-sm mt-1">Click "Add Shareholder" to get started.</p>
         </div>
-        <div className="flex items-center space-x-2">
-          <Checkbox id="bizDocs" checked={formData.businessDocsUploaded} onCheckedChange={(c) => updateFormData("businessDocsUploaded", c as boolean)} />
-          <Label htmlFor="bizDocs" className="font-normal">Business Documents Uploaded</Label>
+      ) : (
+        <div className="space-y-4">
+          {formData.shareholders.map((shareholder, index) => (
+            <div key={index} className="border rounded-lg p-4 space-y-3 relative">
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="font-medium">Shareholder {index + 1}</h4>
+                <Button
+                  type="button"
+                  onClick={() => removeShareholder(index)}
+                  variant="ghost"
+                  size="sm"
+                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="col-span-2">
+                  <Label>Shareholder Name *</Label>
+                  <Input
+                    value={shareholder.name}
+                    onChange={(e) => updateShareholder(index, "name", e.target.value)}
+                    placeholder="Enter full name"
+                    className="mt-1"
+                  />
+                </div>
+
+                <div>
+                  <Label>SIN</Label>
+                  <Input
+                    value={shareholder.sin}
+                    onChange={(e) => updateShareholder(index, "sin", e.target.value)}
+                    placeholder="XXX-XXX-XXX"
+                    className="mt-1"
+                  />
+                </div>
+
+                <div>
+                  <Label>Class of Shares</Label>
+                  <Input
+                    value={shareholder.classOfShares}
+                    onChange={(e) => updateShareholder(index, "classOfShares", e.target.value)}
+                    placeholder="e.g., Common, Preferred"
+                    className="mt-1"
+                  />
+                </div>
+
+                <div className="col-span-2">
+                  <Label>Percentage Holding (%)</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.01"
+                    value={shareholder.percentageHolding}
+                    onChange={(e) => updateShareholder(index, "percentageHolding", e.target.value)}
+                    placeholder="e.g., 50.00"
+                    className="mt-1"
+                  />
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
-        <div className="flex items-center space-x-2">
-          <Checkbox id="engLetter" checked={formData.engagementLetterSigned} onCheckedChange={(c) => updateFormData("engagementLetterSigned", c as boolean)} />
-          <Label htmlFor="engLetter" className="font-normal">Signed Engagement Letter Received</Label>
-        </div>
-      </div>
+      )}
     </div>
   );
 }
