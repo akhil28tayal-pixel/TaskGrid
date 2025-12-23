@@ -38,7 +38,7 @@ import {
 
 // Types
 type ClientType = "INDIVIDUAL" | "BUSINESS" | "TRUST" | "NONPROFIT";
-type EntityType = "LLC" | "S_CORP" | "C_CORP" | "PARTNERSHIP" | "SOLE_PROPRIETORSHIP" | "LLP" | "OTHER";
+type EntityType = "LLC" | "S_CORP" | "C_CORP" | "PARTNERSHIP" | "SOLE_PROPRIETORSHIP" | "LLP" | "CCPC" | "OTHER_PRIVATE_CORPORATION" | "PUBLIC_CORPORATION" | "OTHER";
 type ServiceType = "TAX_PREPARATION" | "BOOKKEEPING" | "PAYROLL" | "AUDIT" | "REVIEW" | "COMPILATION" | "ADVISORY" | "HST_SERVICES" | "TAX_REORGANIZATION" | "OTHER";
 type BillingPreference = "HOURLY" | "FIXED_FEE" | "MONTHLY" | "QUARTERLY" | "ANNUALLY" | "PROJECT_BASED";
 type OnboardingStatus = "PENDING_DOCS" | "IN_PROGRESS" | "ONBOARDING_COMPLETE" | "ON_HOLD";
@@ -141,6 +141,9 @@ const ENTITY_TYPES = [
   { value: "PARTNERSHIP", label: "Partnership" },
   { value: "SOLE_PROPRIETORSHIP", label: "Sole Proprietorship" },
   { value: "LLP", label: "LLP" },
+  { value: "CCPC", label: "CCPC" },
+  { value: "OTHER_PRIVATE_CORPORATION", label: "Other Private Corporation" },
+  { value: "PUBLIC_CORPORATION", label: "Public Corporation" },
   { value: "OTHER", label: "Other" },
 ];
 
