@@ -714,11 +714,32 @@ function Step3Engagement({ formData, updateFormData, toggleService, managers }: 
 }
 
 function Step4ShareholderInfo({ formData, updateFormData }: { formData: ClientFormData; updateFormData: <K extends keyof ClientFormData>(field: K, value: ClientFormData[K]) => void }) {
+  const [isAdding, setIsAdding] = React.useState(false);
+  const [currentShareholder, setCurrentShareholder] = React.useState<Shareholder>({
+    name: "",
+    sin: "",
+    classOfShares: "",
+    percentageHolding: ""
+  });
+
+  const startAdding = () => {
+    setIsAdding(true);
+    setCurrentShareholder({ name: "", sin: "", classOfShares: "", percentageHolding: "" });
+  };
+
+  const cancelAdding = () => {
+    setIsAdding(false);
+    setCurrentShareholder({ name: "", sin: "", classOfShares: "", percentageHolding: "" });
+  };
+
   const addShareholder = () => {
-    updateFormData("shareholders", [
-      ...formData.shareholders,
-      { name: "", sin: "", classOfShares: "", percentageHolding: "" }
-    ]);
+    if (!currentShareholder.name.trim()) {
+      alert("Shareholder name is required");
+      return;
+    }
+    updateFormData("shareholders", [...formData.shareholders, currentShareholder]);
+    setIsAdding(false);
+    setCurrentShareholder({ name: "", sin: "", classOfShares: "", percentageHolding: "" });
   };
 
   const removeShareholder = (index: number) => {
@@ -726,92 +747,114 @@ function Step4ShareholderInfo({ formData, updateFormData }: { formData: ClientFo
     updateFormData("shareholders", updated);
   };
 
-  const updateShareholder = (index: number, field: keyof Shareholder, value: string) => {
-    const updated = [...formData.shareholders];
-    updated[index] = { ...updated[index], [field]: value };
-    updateFormData("shareholders", updated);
+  const updateCurrentShareholder = (field: keyof Shareholder, value: string) => {
+    setCurrentShareholder({ ...currentShareholder, [field]: value });
   };
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-medium">Shareholder Information</h3>
-        <Button type="button" onClick={addShareholder} variant="outline" size="sm">
-          + Add Shareholder
-        </Button>
+        {!isAdding && (
+          <Button type="button" onClick={startAdding} variant="outline" size="sm">
+            + Add Shareholder
+          </Button>
+        )}
       </div>
 
-      {formData.shareholders.length === 0 ? (
-        <div className="text-center py-8 text-gray-500 border-2 border-dashed rounded-lg">
-          <p>No shareholders added yet.</p>
-          <p className="text-sm mt-1">Click "Add Shareholder" to get started.</p>
-        </div>
-      ) : (
-        <div className="space-y-4">
+      {/* List of added shareholders */}
+      {formData.shareholders.length > 0 && (
+        <div className="space-y-2">
           {formData.shareholders.map((shareholder, index) => (
-            <div key={index} className="border rounded-lg p-4 space-y-3 relative">
-              <div className="flex items-center justify-between mb-2">
-                <h4 className="font-medium">Shareholder {index + 1}</h4>
-                <Button
-                  type="button"
-                  onClick={() => removeShareholder(index)}
-                  variant="ghost"
-                  size="sm"
-                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
+            <div key={index} className="flex items-center justify-between p-3 border rounded-lg bg-gray-50 hover:bg-gray-100">
+              <div className="flex-1 text-sm">
+                <span className="font-medium">{shareholder.name}</span>
+                {shareholder.sin && <span className="text-gray-600 ml-2">• SIN: {shareholder.sin}</span>}
+                {shareholder.classOfShares && <span className="text-gray-600 ml-2">• {shareholder.classOfShares}</span>}
+                {shareholder.percentageHolding && <span className="text-gray-600 ml-2">• {shareholder.percentageHolding}%</span>}
               </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="col-span-2">
-                  <Label>Shareholder Name *</Label>
-                  <Input
-                    value={shareholder.name}
-                    onChange={(e) => updateShareholder(index, "name", e.target.value)}
-                    placeholder="Enter full name"
-                    className="mt-1"
-                  />
-                </div>
-
-                <div>
-                  <Label>SIN</Label>
-                  <Input
-                    value={shareholder.sin}
-                    onChange={(e) => updateShareholder(index, "sin", e.target.value)}
-                    placeholder="XXX-XXX-XXX"
-                    className="mt-1"
-                  />
-                </div>
-
-                <div>
-                  <Label>Class of Shares</Label>
-                  <Input
-                    value={shareholder.classOfShares}
-                    onChange={(e) => updateShareholder(index, "classOfShares", e.target.value)}
-                    placeholder="e.g., Common, Preferred"
-                    className="mt-1"
-                  />
-                </div>
-
-                <div className="col-span-2">
-                  <Label>Percentage Holding (%)</Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    max="100"
-                    step="0.01"
-                    value={shareholder.percentageHolding}
-                    onChange={(e) => updateShareholder(index, "percentageHolding", e.target.value)}
-                    placeholder="e.g., 50.00"
-                    className="mt-1"
-                  />
-                </div>
-              </div>
+              <Button
+                type="button"
+                onClick={() => removeShareholder(index)}
+                variant="ghost"
+                size="sm"
+                className="text-red-600 hover:text-red-700 hover:bg-red-50 ml-2"
+              >
+                <X className="h-4 w-4" />
+              </Button>
             </div>
           ))}
         </div>
       )}
+
+      {/* Add new shareholder form */}
+      {isAdding ? (
+        <div className="border rounded-lg p-4 space-y-3 bg-blue-50">
+          <div className="flex items-center justify-between mb-2">
+            <h4 className="font-medium">New Shareholder</h4>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="col-span-2">
+              <Label>Shareholder Name *</Label>
+              <Input
+                value={currentShareholder.name}
+                onChange={(e) => updateCurrentShareholder("name", e.target.value)}
+                placeholder="Enter full name"
+                className="mt-1"
+              />
+            </div>
+
+            <div>
+              <Label>SIN</Label>
+              <Input
+                value={currentShareholder.sin}
+                onChange={(e) => updateCurrentShareholder("sin", e.target.value)}
+                placeholder="XXX-XXX-XXX"
+                className="mt-1"
+              />
+            </div>
+
+            <div>
+              <Label>Class of Shares</Label>
+              <Input
+                value={currentShareholder.classOfShares}
+                onChange={(e) => updateCurrentShareholder("classOfShares", e.target.value)}
+                placeholder="e.g., Common, Preferred"
+                className="mt-1"
+              />
+            </div>
+
+            <div className="col-span-2">
+              <Label>Percentage Holding (%)</Label>
+              <Input
+                type="number"
+                min="0"
+                max="100"
+                step="0.01"
+                value={currentShareholder.percentageHolding}
+                onChange={(e) => updateCurrentShareholder("percentageHolding", e.target.value)}
+                placeholder="e.g., 50.00"
+                className="mt-1"
+              />
+            </div>
+          </div>
+
+          <div className="flex gap-2 pt-2">
+            <Button type="button" onClick={addShareholder} className="flex-1">
+              Add Shareholder
+            </Button>
+            <Button type="button" onClick={cancelAdding} variant="outline" className="flex-1">
+              Cancel
+            </Button>
+          </div>
+        </div>
+      ) : formData.shareholders.length === 0 ? (
+        <div className="text-center py-8 text-gray-500 border-2 border-dashed rounded-lg">
+          <p>No shareholders added yet.</p>
+          <p className="text-sm mt-1">Click "Add Shareholder" to get started.</p>
+        </div>
+      ) : null}
     </div>
   );
 }
