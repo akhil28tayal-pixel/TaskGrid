@@ -1,5 +1,7 @@
 {
-  "/(dashboard)/clients/[id]/page": "app/(dashboard)/clients/[id]/page.js",
+  "/not-found": "app/not-found.js",
+  "/api/auth/[...nextauth]/route": "app/api/auth/[...nextauth]/route.js",
   "/(dashboard)/clients/page": "app/(dashboard)/clients/page.js",
+  "/(dashboard)/clients/[id]/page": "app/(dashboard)/clients/[id]/page.js",
   "/(dashboard)/documents/page": "app/(dashboard)/documents/page.js"
 }

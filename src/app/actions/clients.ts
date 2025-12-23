@@ -323,6 +323,17 @@ export async function getClientById(clientId: string) {
           orderBy: { createdAt: "desc" },
         },
         contacts: true,
+        relationships: {
+          include: {
+            relatedClient: {
+              select: {
+                id: true,
+                legalName: true,
+                preferredName: true,
+              },
+            },
+          },
+        },
       },
     });
 

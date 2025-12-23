@@ -13,6 +13,7 @@ import {
   Calendar,
   Clock,
   FileText,
+  ChevronRight,
   CheckCircle2,
   AlertCircle,
   DollarSign,
@@ -41,6 +42,16 @@ interface UpcomingDeadline {
   title: string;
   dueDate: Date | null;
   status: string;
+}
+
+interface ClientRelationship {
+  id: string;
+  relationshipType: string;
+  relatedClient: {
+    id: string;
+    legalName: string;
+    preferredName: string | null;
+  };
 }
 
 interface Task {
@@ -107,6 +118,7 @@ interface Client {
   contacts: Contact[];
   stats: ClientStats;
   upcomingDeadlines: UpcomingDeadline[];
+  relationships?: ClientRelationship[];
 }
 
 interface ClientDetailContentProps {
@@ -361,27 +373,32 @@ export default function ClientDetailContent({ client }: ClientDetailContentProps
                 </div>
               </div>
               
-              {/* Open Items Summary */}
+              {/* Client Relationships */}
               <div className="bg-white rounded-lg shadow-sm border p-6">
-                <h3 className="text-lg font-semibold mb-4">Open Items</h3>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-600">Open Tasks</span>
-                    <span className="font-semibold">{client.stats.openTasksCount}</span>
+                <h3 className="text-lg font-semibold mb-4">Client Relationships</h3>
+                {client.relationships && client.relationships.length > 0 ? (
+                  <div className="space-y-3">
+                    {client.relationships.map((rel) => (
+                      <Link
+                        key={rel.id}
+                        href={`/clients/${rel.relatedClient.id}`}
+                        className="flex items-center justify-between p-3 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer group"
+                      >
+                        <div className="flex-1">
+                          <p className="font-medium text-gray-900 group-hover:text-blue-600">
+                            {rel.relatedClient.preferredName || rel.relatedClient.legalName}
+                          </p>
+                          <p className="text-sm text-gray-500">{rel.relationshipType}</p>
+                        </div>
+                        <ChevronRight className="h-5 w-5 text-gray-400 group-hover:text-blue-600" />
+                      </Link>
+                    ))}
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-600">Docs Requested</span>
-                    <span className="font-semibold text-orange-600">{client.stats.pendingDocsCount}</span>
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <p className="text-sm">No client relationships defined</p>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-600">Docs Received</span>
-                    <span className="font-semibold text-green-600">{client.stats.receivedDocsCount}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-600">Active Projects</span>
-                    <span className="font-semibold">{client.stats.activeProjects}</span>
-                  </div>
-                </div>
+                )}
               </div>
               
               {/* Projects List */}
