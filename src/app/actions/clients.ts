@@ -417,10 +417,6 @@ export async function updateClient(clientId: string, data: Partial<CreateClientI
         primaryAccountManager: data.primaryAccountManager || null,
         billingPreference: data.billingPreference as any,
         onboardingStatus: data.onboardingStatus as any,
-        kycAmlStatus: data.kycAmlStatus as any,
-        governmentIdUploaded: data.governmentIdUploaded,
-        businessDocsUploaded: data.businessDocsUploaded,
-        engagementLetterSigned: data.engagementLetterSigned,
         accountingSoftware: data.accountingSoftware ? (data.accountingSoftware as any) : null,
         fiscalYearStartMonth: data.fiscalYearStartMonth,
         tags: data.tags,
@@ -428,6 +424,27 @@ export async function updateClient(clientId: string, data: Partial<CreateClientI
         riskRating: data.riskRating ? (data.riskRating as any) : null,
       },
     });
+
+    // Update shareholders if provided
+    if (data.shareholders) {
+      // Delete existing shareholders
+      await prisma.shareholder.deleteMany({
+        where: { clientId },
+      });
+      
+      // Create new shareholders
+      if (data.shareholders.length > 0) {
+        await prisma.shareholder.createMany({
+          data: data.shareholders.map(sh => ({
+            clientId,
+            name: sh.name,
+            sin: sh.sin || null,
+            classOfShares: sh.classOfShares || null,
+            percentageHolding: sh.percentageHolding ? parseFloat(sh.percentageHolding) : null,
+          })),
+        });
+      }
+    }
     
     revalidatePath("/clients");
     revalidatePath(`/clients/${clientId}`);
