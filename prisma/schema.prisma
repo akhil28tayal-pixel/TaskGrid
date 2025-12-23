@@ -74,10 +74,6 @@ model Client {
   primaryAccountManager  String?
   billingPreference      BillingPreference   @default(MONTHLY)
   onboardingStatus       OnboardingStatus    @default(PENDING_DOCS)
-  kycAmlStatus           KycAmlStatus        @default(NOT_STARTED)
-  governmentIdUploaded   Boolean             @default(false)
-  businessDocsUploaded   Boolean             @default(false)
-  engagementLetterSigned Boolean             @default(false)
   accountingSoftware     AccountingSoftware?
   fiscalYearStartMonth   Int?                @default(1)
   tags                   String[]
@@ -643,14 +639,6 @@ enum OnboardingStatus {
   IN_PROGRESS
   ONBOARDING_COMPLETE
   ON_HOLD
-}
-
-enum KycAmlStatus {
-  NOT_STARTED
-  IN_PROGRESS
-  VERIFIED
-  FAILED
-  EXPIRED
 }
 
 enum AccountingSoftware {
