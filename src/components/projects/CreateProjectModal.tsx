@@ -33,6 +33,7 @@ import { createProject } from "@/app/actions/projects";
 import { getClients } from "@/app/actions/clients";
 import { getTeamMembers } from "@/app/actions/team";
 import { getWorkflowTemplates } from "@/app/actions/templates";
+import { createRecurringWork } from "@/app/actions/workflows";
 
 type StartingPoint = "scratch" | "template" | "new-template" | null;
 type RecurringOption = "not-recurring" | "weekly" | "biweekly" | "monthly" | "quarterly" | "annually";
@@ -83,7 +84,9 @@ export function CreateProjectModal({ open, onOpenChange }: CreateProjectModalPro
 
   // Form state
   const [projectName, setProjectName] = useState("");
-  const [clientId, setClientId] = useState("");
+  const [clientId, setClientId] = useState("");  // Deprecated: kept for backward compatibility
+  const [selectedClientIds, setSelectedClientIds] = useState<string[]>([]);
+  const [clientSearch, setClientSearch] = useState("");
   const [startDate, setStartDate] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [recurring, setRecurring] = useState<RecurringOption>("not-recurring");
@@ -155,6 +158,8 @@ export function CreateProjectModal({ open, onOpenChange }: CreateProjectModalPro
     setStartingPoint(null);
     setProjectName("");
     setClientId("");
+    setSelectedClientIds([]);
+    setClientSearch("");
     setStartDate("");
     setDueDate("");
     setRecurring("not-recurring");
@@ -178,31 +183,78 @@ export function CreateProjectModal({ open, onOpenChange }: CreateProjectModalPro
     setSelectedAssignees((prev) => prev.filter((id) => id !== userId));
   }
 
+  function toggleClient(clientId: string) {
+    setSelectedClientIds((prev) =>
+      prev.includes(clientId)
+        ? prev.filter((id) => id !== clientId)
+        : [...prev, clientId]
+    );
+  }
+
+  function removeClient(clientId: string) {
+    setSelectedClientIds((prev) => prev.filter((id) => id !== clientId));
+  }
+
   async function handleCreate() {
-    if (!projectName.trim() || !clientId) {
+    if (!projectName.trim() || selectedClientIds.length === 0) {
       return;
     }
 
     setIsSubmitting(true);
     try {
-      const projectData = {
-        name: projectName,
-        clientId,
-        type: "OTHER",
-        startDate: startDate || undefined,
-        dueDate: dueDate || undefined,
-        assigneeIds: selectedAssignees.length > 0 ? selectedAssignees : undefined,
-        templateId: selectedTemplateId || undefined,
-      };
-      
-      const result = await createProject(projectData);
+      // If recurring is selected, create recurring work for each client
+      if (recurring !== "not-recurring") {
+        // Map recurring option to frequency
+        const frequencyMap: Record<string, string> = {
+          "weekly": "WEEKLY",
+          "biweekly": "BIWEEKLY",
+          "monthly": "MONTHLY",
+          "quarterly": "QUARTERLY",
+          "annually": "ANNUALLY",
+        };
 
-      if (result.success && result.project) {
+        const frequency = frequencyMap[recurring];
+        
+        // Create recurring work for each selected client
+        for (const clientId of selectedClientIds) {
+          await createRecurringWork({
+            name: projectName,
+            description: undefined,
+            projectType: "OTHER",
+            frequency,
+            interval: 1,
+            startDate: startDate || new Date().toISOString().split('T')[0],
+            endDate: undefined,
+            clientId,
+            templateId: selectedTemplateId || undefined,
+            assigneeId: selectedAssignees.length > 0 ? selectedAssignees[0] : undefined,
+            autoAssign: autoAddToUnassigned,
+          });
+        }
+
         handleClose();
-        router.push(`/projects/${result.project.id}`);
+        router.push("/projects");
       } else {
-        console.error("Failed to create project:", result.error);
-        alert("Failed to create project: " + result.error);
+        // Create regular project(s)
+        const projectData = {
+          name: projectName,
+          clientIds: selectedClientIds,
+          type: "OTHER",
+          startDate: startDate || undefined,
+          dueDate: dueDate || undefined,
+          assigneeIds: selectedAssignees.length > 0 ? selectedAssignees : undefined,
+          templateId: selectedTemplateId || undefined,
+        };
+        
+        const result = await createProject(projectData);
+
+        if (result.success && result.project) {
+          handleClose();
+          router.push(`/projects/${result.project.id}`);
+        } else {
+          console.error("Failed to create project:", result.error);
+          alert("Failed to create project: " + result.error);
+        }
       }
     } catch (error) {
       console.error("Error creating project:", error);
@@ -216,6 +268,12 @@ export function CreateProjectModal({ open, onOpenChange }: CreateProjectModalPro
     (member) =>
       member.name?.toLowerCase().includes(assigneeSearch.toLowerCase()) ||
       member.email.toLowerCase().includes(assigneeSearch.toLowerCase())
+  );
+
+  const filteredClients = clients.filter(
+    (client) =>
+      client.name.toLowerCase().includes(clientSearch.toLowerCase()) ||
+      client.email.toLowerCase().includes(clientSearch.toLowerCase())
   );
 
   return (
@@ -347,35 +405,70 @@ export function CreateProjectModal({ open, onOpenChange }: CreateProjectModalPro
               <DialogTitle>Create New Project</DialogTitle>
             </DialogHeader>
             <div className="px-6 pb-6 space-y-5">
-              {/* Project Name & Client */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="projectName">
-                    Project Name<span className="text-red-500">*</span>
-                  </Label>
-                  <Input
-                    id="projectName"
-                    placeholder="Name"
-                    value={projectName}
-                    onChange={(e) => setProjectName(e.target.value)}
+              {/* Project Name */}
+              <div className="space-y-2">
+                <Label htmlFor="projectName">
+                  Project Name<span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="projectName"
+                  placeholder="Name"
+                  value={projectName}
+                  onChange={(e) => setProjectName(e.target.value)}
+                />
+              </div>
+
+              {/* Clients - Multi-select */}
+              <div className="space-y-2">
+                <Label>
+                  Clients<span className="text-red-500">*</span>
+                </Label>
+                <div className="flex flex-wrap items-center gap-2 p-2 border rounded-md min-h-[42px]">
+                  {selectedClientIds.map((clientId) => {
+                    const client = clients.find((c) => c.id === clientId);
+                    if (!client) return null;
+                    return (
+                      <Badge
+                        key={clientId}
+                        variant="secondary"
+                        className="flex items-center gap-1 bg-purple-100 text-purple-800"
+                      >
+                        <X
+                          className="h-3 w-3 cursor-pointer"
+                          onClick={() => removeClient(clientId)}
+                        />
+                        {client.name}
+                      </Badge>
+                    );
+                  })}
+                  <input
+                    type="text"
+                    placeholder="search clients"
+                    className="flex-1 min-w-[100px] outline-none text-sm"
+                    value={clientSearch}
+                    onChange={(e) => setClientSearch(e.target.value)}
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="client">Client</Label>
-                  <Select value={clientId} onValueChange={setClientId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Clients" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {clients.map((client) => (
-                        <SelectItem key={client.id} value={client.id}>
-                          {client.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-gray-500">The client will not be sent anything.</p>
-                </div>
+                {clientSearch && (
+                  <div className="border rounded-md max-h-[150px] overflow-y-auto">
+                    {filteredClients.map((client) => (
+                      <div
+                        key={client.id}
+                        className="px-3 py-2 hover:bg-gray-50 cursor-pointer flex items-center justify-between"
+                        onClick={() => {
+                          toggleClient(client.id);
+                          setClientSearch("");
+                        }}
+                      >
+                        <span>{client.name}</span>
+                        {selectedClientIds.includes(client.id) && (
+                          <span className="text-blue-600">✓</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <p className="text-xs text-gray-500">Select one or more clients for this project.</p>
               </div>
 
               {/* Start Date & Due Date */}
@@ -542,16 +635,16 @@ export function CreateProjectModal({ open, onOpenChange }: CreateProjectModalPro
                 onClick={() => {
                   handleCreate();
                 }}
-                disabled={!projectName.trim() || !clientId || isSubmitting}
+                disabled={!projectName.trim() || selectedClientIds.length === 0 || isSubmitting}
                 className="bg-blue-600 hover:bg-blue-700"
               >
                 {isSubmitting ? "Creating..." : "Create"}
               </Button>
             </div>
-            {(!projectName.trim() || !clientId) && (
+            {(!projectName.trim() || selectedClientIds.length === 0) && (
               <p className="px-6 pb-4 text-xs text-red-500">
                 {!projectName.trim() && "Project name is required. "}
-                {!clientId && "Please select a client."}
+                {selectedClientIds.length === 0 && "Please select at least one client."}
               </p>
             )}
           </>

@@ -13,7 +13,10 @@ export const authOptions: NextAuthOptions = {
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
+        console.log("[AUTH] Staff login attempt:", credentials?.email);
+        
         if (!credentials?.email || !credentials?.password) {
+          console.log("[AUTH] Missing credentials");
           throw new Error("Email and password are required");
         }
 
@@ -21,20 +24,29 @@ export const authOptions: NextAuthOptions = {
           where: { email: credentials.email },
         });
 
+        console.log("[AUTH] User found:", !!user);
+        console.log("[AUTH] Has password:", !!user?.password);
+        console.log("[AUTH] Is active:", user?.isActive);
+
         if (!user || !user.password) {
+          console.log("[AUTH] User not found or no password");
           throw new Error("Invalid email or password");
         }
 
         if (!user.isActive) {
+          console.log("[AUTH] Account deactivated");
           throw new Error("Account is deactivated");
         }
 
+        console.log("[AUTH] Comparing passwords...");
         const isPasswordValid = await bcrypt.compare(
           credentials.password,
           user.password
         );
+        console.log("[AUTH] Password valid:", isPasswordValid);
 
         if (!isPasswordValid) {
+          console.log("[AUTH] Password mismatch");
           throw new Error("Invalid email or password");
         }
 
@@ -51,6 +63,58 @@ export const authOptions: NextAuthOptions = {
           role: user.role,
           userType: "staff",
         };
+      },
+    }),
+    CredentialsProvider({
+      id: "client-token",
+      name: "Client Token Login",
+      credentials: {
+        token: { label: "Access Token", type: "text" },
+      },
+      async authorize(credentials) {
+        console.log("[AUTH] Client token login attempt");
+        
+        if (!credentials?.token) {
+          console.log("[AUTH] Missing token");
+          throw new Error("Access token is required");
+        }
+
+        const clientAccess = await prisma.clientPortalAccess.findUnique({
+          where: { accessToken: credentials.token },
+          include: {
+            client: true,
+          },
+        });
+
+        console.log("[AUTH] Client access found:", !!clientAccess);
+        console.log("[AUTH] Is active:", clientAccess?.isActive);
+
+        if (!clientAccess) {
+          console.log("[AUTH] Invalid access token");
+          throw new Error("Invalid access link");
+        }
+
+        if (!clientAccess.isActive) {
+          console.log("[AUTH] Portal access deactivated");
+          throw new Error("Portal access is deactivated");
+        }
+
+        // Update last access
+        await prisma.clientPortalAccess.update({
+          where: { id: clientAccess.id },
+          data: { lastAccessAt: new Date() },
+        });
+
+        console.log("[AUTH] Token authentication successful");
+
+        return {
+          id: clientAccess.id,
+          email: clientAccess.email,
+          name: clientAccess.client.preferredName || clientAccess.client.legalName,
+          role: "ASSOCIATE" as any,
+          userType: "client",
+          clientId: clientAccess.clientId,
+        } as any;
       },
     }),
     CredentialsProvider({

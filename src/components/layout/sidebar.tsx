@@ -38,7 +38,6 @@ const clientSubNav = [
 // Sub-navigation for Workflows
 const workflowSubNav = [
   { name: "Projects", href: "/projects" },
-  { name: "Tasks", href: "/tasks" },
   { name: "Workflows", href: "/workflows" },
   { name: "Timeline", href: "/timeline" },
 ];

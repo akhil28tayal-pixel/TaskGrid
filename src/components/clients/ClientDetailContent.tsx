@@ -299,8 +299,8 @@ export default function ClientDetailContent({ client }: ClientDetailContentProps
             <TabsTrigger value="overview" className="flex items-center gap-2">
               <Briefcase className="h-4 w-4" /> Overview
             </TabsTrigger>
-            <TabsTrigger value="tasks" className="flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4" /> Tasks
+            <TabsTrigger value="projects" className="flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4" /> Projects
             </TabsTrigger>
             <TabsTrigger value="documents" className="flex items-center gap-2">
               <FileText className="h-4 w-4" /> Documents
@@ -434,33 +434,38 @@ export default function ClientDetailContent({ client }: ClientDetailContentProps
             </div>
           </TabsContent>
           
-          {/* Tasks Tab */}
-          <TabsContent value="tasks">
+          {/* Projects Tab */}
+          <TabsContent value="projects">
             <div className="bg-white rounded-lg shadow-sm border">
               <div className="p-6 border-b">
-                <h3 className="text-lg font-semibold">Tasks & Deadlines</h3>
+                <h3 className="text-lg font-semibold">Projects</h3>
               </div>
-              {allTasks.length === 0 ? (
-                <div className="p-8 text-center text-gray-500">No tasks yet</div>
+              {client.projects.length === 0 ? (
+                <div className="p-8 text-center text-gray-500">No projects yet</div>
               ) : (
                 <div className="divide-y">
-                  {allTasks.map((task) => (
-                    <div key={task.id} className="p-4 hover:bg-gray-50 flex items-center justify-between">
+                  {client.projects.map((project) => (
+                    <Link
+                      key={project.id}
+                      href={`/projects/${project.id}`}
+                      className="flex items-center justify-between p-4 hover:bg-gray-50 transition-colors group"
+                    >
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-gray-900">{task.title}</p>
-                        {task.description && (
-                          <p className="text-sm text-gray-500 truncate">{task.description}</p>
-                        )}
+                        <p className="font-medium text-gray-900 group-hover:text-blue-600">{project.name}</p>
+                        <p className="text-sm text-gray-500">
+                          {project.tasks.length} tasks • Due {formatDate(project.dueDate)}
+                        </p>
                       </div>
                       <div className="flex items-center gap-4 ml-4">
-                        {task.dueDate && (
-                          <span className="text-sm text-gray-500">{formatDate(task.dueDate)}</span>
+                        {project.dueDate && (
+                          <span className="text-sm text-gray-500">{formatDate(project.dueDate)}</span>
                         )}
-                        <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${getTaskStatusColor(task.status)}`}>
-                          {task.status.replace(/_/g, " ")}
+                        <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${getTaskStatusColor(project.status)}`}>
+                          {project.status.replace(/_/g, " ")}
                         </span>
+                        <ExternalLink className="h-4 w-4 text-gray-400 group-hover:text-blue-600" />
                       </div>
-                    </div>
+                    </Link>
                   ))}
                 </div>
               )}

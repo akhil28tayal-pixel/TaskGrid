@@ -5,6 +5,12 @@ import { getServerSession } from "next-auth";
 import { prisma } from "@/lib/prisma";
 import { authOptions } from "@/lib/auth";
 import { sendTaskNotificationToClient } from "@/app/actions/send-task-notification";
+import { randomBytes } from "crypto";
+
+// Generate a CUID-like ID
+function generateId() {
+  return 'c' + randomBytes(12).toString('base64').replace(/[+/=]/g, '').substring(0, 24);
+}
 
 export async function getProjects() {
   try {
@@ -212,7 +218,8 @@ interface CreateProjectInput {
   description?: string;
   type: string;
   priority?: string;
-  clientId: string;
+  clientId?: string;  // Deprecated: use clientIds instead
+  clientIds?: string[];  // New: support multiple clients
   startDate?: string;
   dueDate?: string;
   assigneeIds?: string[];
@@ -243,29 +250,41 @@ export async function createProject(data: CreateProjectInput) {
       return { success: false, error: "User not found" };
     }
 
-    const project = await prisma.project.create({
-      data: {
-        name: data.name,
-        description: data.description,
-        type: data.type as any,
-        priority: (data.priority as any) || "MEDIUM",
-        clientId: data.clientId,
-        startDate: data.startDate ? new Date(data.startDate) : null,
-        dueDate: data.dueDate ? new Date(data.dueDate) : null,
-        status: "NOT_STARTED",
-        templateId: data.templateId,
-        assignments: data.assigneeIds
-          ? {
-              create: data.assigneeIds.map((userId) => ({
-                userId,
-                role: "PREPARER" as const,
-              })),
-            }
-          : undefined,
-      },
-    });
+    // Support both single client (backward compatibility) and multiple clients
+    const clientIds = data.clientIds || (data.clientId ? [data.clientId] : []);
+    
+    if (clientIds.length === 0) {
+      return { success: false, error: "At least one client must be selected" };
+    }
 
-    // If a template is provided, copy tasks from the template
+    // Create a separate project for each client
+    const createdProjects = [];
+    for (const clientId of clientIds) {
+      const project = await prisma.project.create({
+        data: {
+          name: data.name,
+          description: data.description,
+          type: data.type as any,
+          priority: (data.priority as any) || "MEDIUM",
+          clientId: clientId,
+          startDate: data.startDate ? new Date(data.startDate) : null,
+          dueDate: data.dueDate ? new Date(data.dueDate) : null,
+          status: "NOT_STARTED",
+          templateId: data.templateId,
+          assignments: data.assigneeIds
+            ? {
+                create: data.assigneeIds.map((userId) => ({
+                  userId,
+                  role: "PREPARER" as const,
+                })),
+              }
+            : undefined,
+        },
+      });
+      createdProjects.push(project);
+    }
+
+    // If a template is provided, copy tasks from the template to all created projects
     if (data.templateId) {
       const template = await prisma.workflowTemplate.findUnique({
         where: { id: data.templateId },
@@ -285,40 +304,42 @@ export async function createProject(data: CreateProjectInput) {
       });
 
       if (template) {
-        // Create tasks from template sections
-        for (const section of template.sections) {
-          for (const templateTask of section.tasks) {
-            // Create the main task
-            const newTask = await prisma.task.create({
-              data: {
-                title: templateTask.title,
-                description: templateTask.description,
-                projectId: project.id,
-                createdById: user.id,
-                order: templateTask.order,
-                status: "TODO",
-                taskType: templateTask.taskType as any || "TEAM_TASK",
-              },
-            });
-
-            // Automatically send notification if it's a CLIENT_REQUEST task
-            if (templateTask.taskType === "CLIENT_REQUEST") {
-              await sendTaskNotificationToClient(newTask.id);
-            }
-
-            // Create subtasks
-            for (const subtask of templateTask.subtasks) {
-              await prisma.task.create({
+        // Create tasks for each project
+        for (const project of createdProjects) {
+          for (const section of template.sections) {
+            for (const templateTask of section.tasks) {
+              // Create the main task
+              const newTask = await prisma.task.create({
                 data: {
-                  title: subtask.title,
+                  title: templateTask.title,
+                  description: templateTask.description,
                   projectId: project.id,
                   createdById: user.id,
-                  parentId: newTask.id,
-                  order: subtask.order,
+                  order: templateTask.order,
                   status: "TODO",
                   taskType: templateTask.taskType as any || "TEAM_TASK",
                 },
               });
+
+              // Automatically send notification if it's a CLIENT_REQUEST task
+              if (templateTask.taskType === "CLIENT_REQUEST") {
+                await sendTaskNotificationToClient(newTask.id);
+              }
+
+              // Create subtasks
+              for (const subtask of templateTask.subtasks) {
+                await prisma.task.create({
+                  data: {
+                    title: subtask.title,
+                    projectId: project.id,
+                    createdById: user.id,
+                    parentId: newTask.id,
+                    order: subtask.order,
+                    status: "TODO",
+                    taskType: templateTask.taskType as any || "TEAM_TASK",
+                  },
+                });
+              }
             }
           }
         }
@@ -327,7 +348,7 @@ export async function createProject(data: CreateProjectInput) {
 
     revalidatePath("/projects");
     revalidatePath("/dashboard");
-    return { success: true, project };
+    return { success: true, project: createdProjects[0], projects: createdProjects };
   } catch (error: any) {
     console.error("Failed to create project:", error);
     return { success: false, error: error?.message || "Failed to create project" };

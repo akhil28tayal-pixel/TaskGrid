@@ -65,6 +65,7 @@ import {
 } from "@/app/actions/tasks";
 import { getTaskDocuments, downloadDocument } from "@/app/actions/client-file-upload";
 import { teamUploadDocumentForClient, getTeamDocumentsForTask, updateTaskQuestion, deleteTeamDocument } from "@/app/actions/team-document-upload";
+import { getProjectDocuments, downloadProjectDocument } from "@/app/actions/project-documents";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ClientTaskWizard } from "@/components/workflows/ClientTaskWizard";
 import { ProjectTagSelector } from "@/components/projects/ProjectTagSelector";
@@ -146,6 +147,9 @@ export function ProjectEditor({ project, userRole = "ASSOCIATE" }: ProjectEditor
   const [newComment, setNewComment] = useState("");
   const [isAddingComment, setIsAddingComment] = useState(false);
   const [isUploadingTeamDoc, setIsUploadingTeamDoc] = useState(false);
+  const [projectFiles, setProjectFiles] = useState<any[]>([]);
+  const [filesStats, setFilesStats] = useState<any>(null);
+  const [isLoadingFiles, setIsLoadingFiles] = useState(false);
 
   // Fetch team members and existing tasks on mount
   useEffect(() => {
@@ -228,6 +232,22 @@ export function ProjectEditor({ project, userRole = "ASSOCIATE" }: ProjectEditor
     }
     fetchData();
   }, [project.id]);
+
+  // Fetch project files when Files tab is active
+  useEffect(() => {
+    async function fetchProjectFiles() {
+      if (activeTab === "files" && !isLoadingFiles) {
+        setIsLoadingFiles(true);
+        const result = await getProjectDocuments(project.id);
+        if (result.success) {
+          setProjectFiles(result.files || []);
+          setFilesStats(result.stats);
+        }
+        setIsLoadingFiles(false);
+      }
+    }
+    fetchProjectFiles();
+  }, [activeTab, project.id]);
 
   const toggleSection = (sectionId: string) => {
     const newExpanded = new Set(expandedSections);
@@ -1043,32 +1063,35 @@ export function ProjectEditor({ project, userRole = "ASSOCIATE" }: ProjectEditor
         </Tabs>
       </div>
 
-      {/* Add Section Buttons */}
-      <div className="px-6 py-4 flex gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => handleAddSection("TEAM_TASK")}
-          className="text-blue-600 border-blue-600 hover:bg-emerald-50"
-        >
-          <Plus className="h-4 w-4 mr-1" />
-          Team Tasks
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => handleAddSection("CLIENT_REQUEST")}
-          className="text-purple-600 border-purple-600 hover:bg-purple-50"
-        >
-          <Plus className="h-4 w-4 mr-1" />
-          Client Request
-        </Button>
-      </div>
+      {/* Add Section Buttons - Only show on List tab */}
+      {activeTab === "list" && (
+        <div className="px-6 py-4 flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handleAddSection("TEAM_TASK")}
+            className="text-blue-600 border-blue-600 hover:bg-emerald-50"
+          >
+            <Plus className="h-4 w-4 mr-1" />
+            Team Tasks
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handleAddSection("CLIENT_REQUEST")}
+            className="text-purple-600 border-purple-600 hover:bg-purple-50"
+          >
+            <Plus className="h-4 w-4 mr-1" />
+            Client Request
+          </Button>
+        </div>
+      )}
 
       {/* Content Area */}
       <div className="px-6 pb-6">
-        <div className="bg-white rounded-lg border min-h-[400px]">
-          {sections.length === 0 ? (
+        {activeTab === "list" ? (
+          <div className="bg-white rounded-lg border min-h-[400px]">
+            {sections.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-center">
               <div className="text-gray-400 mb-4">
                 <List className="h-12 w-12 mx-auto mb-2" />
@@ -1269,7 +1292,114 @@ export function ProjectEditor({ project, userRole = "ASSOCIATE" }: ProjectEditor
               ))}
             </div>
           )}
-        </div>
+          </div>
+        ) : (
+          /* Files Tab Content */
+          <div className="bg-white rounded-lg border min-h-[400px]">
+            {isLoadingFiles ? (
+              <div className="flex items-center justify-center py-20">
+                <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+              </div>
+            ) : projectFiles.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-20 text-center">
+                <Paperclip className="h-12 w-12 mx-auto text-gray-300 mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No files yet</h3>
+                <p className="text-gray-500">
+                  Files uploaded to tasks will appear here
+                </p>
+              </div>
+            ) : (
+              <div className="p-6">
+                {/* Stats Summary */}
+                {filesStats && (
+                  <div className="mb-6 grid grid-cols-4 gap-4">
+                    <div className="bg-blue-50 rounded-lg p-4">
+                      <div className="text-2xl font-bold text-blue-600">{filesStats.total}</div>
+                      <div className="text-sm text-gray-600">Total Files</div>
+                    </div>
+                    <div className="bg-green-50 rounded-lg p-4">
+                      <div className="text-2xl font-bold text-green-600">{filesStats.teamFiles}</div>
+                      <div className="text-sm text-gray-600">Team Files</div>
+                    </div>
+                    <div className="bg-purple-50 rounded-lg p-4">
+                      <div className="text-2xl font-bold text-purple-600">{filesStats.clientFiles}</div>
+                      <div className="text-sm text-gray-600">Client Files</div>
+                    </div>
+                    <div className="bg-orange-50 rounded-lg p-4">
+                      <div className="text-2xl font-bold text-orange-600">{filesStats.attachments}</div>
+                      <div className="text-sm text-gray-600">Attachments</div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Files List */}
+                <div className="space-y-2">
+                  <h3 className="font-semibold text-lg mb-4">All Files</h3>
+                  {projectFiles.map((file) => (
+                    <div
+                      key={file.id}
+                      className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 group"
+                    >
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <Paperclip className="h-5 w-5 text-gray-400 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium truncate">{file.name}</span>
+                            {file.source === 'team' ? (
+                              <Badge className="bg-blue-100 text-blue-800 border-blue-300 text-xs">
+                                Team
+                              </Badge>
+                            ) : (
+                              <Badge className="bg-purple-100 text-purple-800 border-purple-300 text-xs">
+                                Client
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-3 text-xs text-gray-500 mt-1">
+                            {file.uploadedBy && (
+                              <span>
+                                Uploaded by {file.uploadedBy.name || file.uploadedBy.email}
+                              </span>
+                            )}
+                            {file.task && (
+                              <span>• Task: {file.task.title}</span>
+                            )}
+                            {file.fileSize && (
+                              <span>
+                                • {(file.fileSize / 1024).toFixed(1)} KB
+                              </span>
+                            )}
+                            <span>
+                              • {new Date(file.createdAt).toLocaleDateString()}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="opacity-0 group-hover:opacity-100"
+                        onClick={async () => {
+                          const result = await downloadProjectDocument(file.id, file.type);
+                          if (result.success && result.document) {
+                            const link = document.createElement('a');
+                            link.href = result.document.fileUrl || '';
+                            link.download = result.document.name;
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                          }
+                        }}
+                      >
+                        <Download className="h-4 w-4 text-blue-600" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Task Detail Panel */}

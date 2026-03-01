@@ -95,6 +95,7 @@ export function ClientsPageContent({ initialClients }: ClientsPageContentProps) 
       if (result.needsApproval) {
         alert("Client submitted for Partner approval. You will be notified once approved.");
       } else {
+        alert("Client created successfully! Portal access link sent to client.");
         // Refresh the page to show the new client
         window.location.reload();
       }

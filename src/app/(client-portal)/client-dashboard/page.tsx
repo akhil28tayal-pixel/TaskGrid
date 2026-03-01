@@ -204,8 +204,8 @@ export default function ClientDashboardPage() {
           <div className="p-6 border-b">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-900">My Tasks</h3>
-              <Link href="/client-tasks" className="text-sm text-blue-600 hover:underline">
-                View all
+              <Link href="/client-projects" className="text-sm text-blue-600 hover:underline">
+                View all projects
               </Link>
             </div>
           </div>
@@ -248,7 +248,7 @@ export default function ClientDashboardPage() {
           <div className="p-6 border-b">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-900">Ongoing Projects</h3>
-              <Link href="/client-tasks" className="text-sm text-blue-600 hover:underline">
+              <Link href="/client-projects" className="text-sm text-blue-600 hover:underline">
                 View all
               </Link>
             </div>
@@ -299,7 +299,7 @@ export default function ClientDashboardPage() {
           <div className="p-6 border-b">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-900">Pending Requests</h3>
-              <Link href="/client-tasks" className="text-sm text-blue-600 hover:underline">
+              <Link href="/client-projects" className="text-sm text-blue-600 hover:underline">
                 View all
               </Link>
             </div>

@@ -46,9 +46,9 @@ export async function sendEmail({ to, subject, html, text }: SendEmailOptions) {
 export async function sendClientPortalInvite(
   clientEmail: string,
   clientName: string,
-  setupLink: string
+  portalLink: string
 ) {
-  const subject = "Welcome to TaskGrid Client Portal - Set Up Your Password";
+  const subject = "Welcome to TaskGrid Client Portal - Your Access Link";
   
   const html = `
     <!DOCTYPE html>
@@ -61,6 +61,7 @@ export async function sendClientPortalInvite(
         .content { background: #f9fafb; padding: 30px; border-radius: 0 0 8px 8px; }
         .button { display: inline-block; background: #059669; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; margin: 20px 0; }
         .footer { text-align: center; color: #6b7280; font-size: 12px; margin-top: 20px; }
+        .warning { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 12px; margin: 20px 0; }
       </style>
     </head>
     <body>
@@ -70,20 +71,23 @@ export async function sendClientPortalInvite(
         </div>
         <div class="content">
           <p>Hello ${clientName},</p>
-          <p>Your client portal account has been created. To access your portal and view your projects, please set up your password by clicking the button below:</p>
+          <p>Your client portal account has been created! Click the button below to access your portal and view your projects:</p>
           <p style="text-align: center;">
-            <a href="${setupLink}" class="button">Set Up Password</a>
+            <a href="${portalLink}" class="button">Access Client Portal</a>
           </p>
           <p>Or copy and paste this link into your browser:</p>
-          <p style="word-break: break-all; color: #059669;">${setupLink}</p>
-          <p><strong>This link will expire in 7 days.</strong></p>
-          <p>Once you've set your password, you can log in at any time to:</p>
+          <p style="word-break: break-all; color: #059669;">${portalLink}</p>
+          <div class="warning">
+            <strong>⚠️ Important:</strong> This link is unique to you. Please keep it secure and do not share it with others.
+          </div>
+          <p>Through your client portal, you can:</p>
           <ul>
             <li>View your ongoing projects</li>
             <li>Upload requested documents</li>
             <li>Track project progress</li>
             <li>Communicate with your account team</li>
           </ul>
+          <p>You can access your portal at any time using the link above. Bookmark it for easy access!</p>
           <p>If you have any questions, please contact your account manager.</p>
           <p>Best regards,<br>The TaskGrid Team</p>
         </div>

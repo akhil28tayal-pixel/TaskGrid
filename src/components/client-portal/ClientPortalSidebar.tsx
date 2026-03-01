@@ -22,8 +22,8 @@ const navItems = [
     icon: LayoutDashboard,
   },
   {
-    title: "Tasks",
-    href: "/client-tasks",
+    title: "Projects",
+    href: "/client-projects",
     icon: CheckSquare,
   },
   {

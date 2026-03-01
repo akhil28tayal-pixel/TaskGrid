@@ -547,7 +547,10 @@ export function CreateClientDialog({ open, onOpenChange, onSubmit, teamMembers =
             <div className="flex gap-2">
               <Button variant="outline" onClick={handleClose}>Cancel</Button>
               {currentStep === STEPS.length ? (
-                <Button onClick={handleSubmit} disabled={isSubmitting || !formData.legalName || !formData.primaryEmail}>
+                <Button 
+                  onClick={handleSubmit}
+                  disabled={isSubmitting || !formData.legalName || !formData.primaryEmail}
+                >
                   {isSubmitting ? "Creating..." : "Create Client"}
                 </Button>
               ) : (
@@ -597,8 +600,8 @@ function Step1Identification({ formData, updateFormData }: { formData: ClientFor
       )}
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <Label>{formData.clientType === "INDIVIDUAL" ? "SSN" : "Business No. / Tax ID / EIN"}</Label>
-          <Input className="mt-1" value={formData.taxId} onChange={(e) => updateFormData("taxId", e.target.value)} placeholder={formData.clientType === "INDIVIDUAL" ? "XXX-XX-XXXX" : "XX-XXXXXXX"} />
+          <Label>{formData.clientType === "INDIVIDUAL" ? "SIN" : "Business No. / Tax ID / EIN"}</Label>
+          <Input className="mt-1" value={formData.taxId} onChange={(e) => updateFormData("taxId", e.target.value)} placeholder={formData.clientType === "INDIVIDUAL" ? "XXX-XXX-XXX" : "XX-XXXXXXX"} />
         </div>
         <div>
           <Label>{formData.clientType === "INDIVIDUAL" ? "Date of Birth" : "Date of Incorporation"}</Label>

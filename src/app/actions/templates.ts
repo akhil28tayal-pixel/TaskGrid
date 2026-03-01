@@ -9,6 +9,7 @@ import { prisma } from "@/lib/prisma";
 interface CreateTemplateInput {
   name: string;
   description?: string;
+  clientIds?: string[];
 }
 
 interface CreateSectionInput {
@@ -56,13 +57,35 @@ export async function createWorkflowTemplate(data: CreateTemplateInput) {
       where: { email: userEmail! },
     });
 
+    if (!user) {
+      return { success: false, error: "User not found" };
+    }
+
     const template = await prisma.workflowTemplate.create({
       data: {
         name: data.name,
         description: data.description,
-        createdById: user?.id || null,
+        createdById: user.id,
       },
     });
+
+    // If clientIds are provided, create projects for each client
+    if (data.clientIds && data.clientIds.length > 0) {
+      for (const clientId of data.clientIds) {
+        await prisma.project.create({
+          data: {
+            name: data.name,
+            description: data.description,
+            type: "OTHER",
+            priority: "MEDIUM",
+            clientId: clientId,
+            status: "NOT_STARTED",
+            templateId: template.id,
+          },
+        });
+      }
+      revalidatePath("/projects");
+    }
 
     revalidatePath("/workflows");
     return { success: true, template };
