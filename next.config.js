@@ -8,6 +8,8 @@ const nextConfig = {
   // Optimize for production
   poweredByHeader: false,
   compress: true,
+  // Netlify configuration
+  output: 'standalone',
 };
 
 module.exports = nextConfig;
