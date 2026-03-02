@@ -89,10 +89,10 @@ export async function getUserTasks() {
         id: task.project.id,
         name: task.project.name,
         dueDate: task.project.dueDate,
-        client: {
+        client: task.project.client ? {
           id: task.project.client.id,
           name: task.project.client.preferredName || task.project.client.legalName,
-        },
+        } : null,
         tag: task.project.tag,
       },
       assignee: task.assignee ? {

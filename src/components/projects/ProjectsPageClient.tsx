@@ -44,7 +44,7 @@ interface Project {
   client: {
     id: string;
     name: string;
-  };
+  } | null;
   tag?: ProjectTag | null;
   assignees: Array<{
     id: string;
@@ -153,7 +153,11 @@ export function ProjectsPageClient({ initialProjects }: ProjectsPageClientProps)
   // Get unique clients and assignees for filter options
   const uniqueClients = useMemo(() => {
     const clients = new Map<string, string>();
-    initialProjects.forEach((p) => clients.set(p.client.id, p.client.name));
+    initialProjects.forEach((p) => {
+      if (p.client) {
+        clients.set(p.client.id, p.client.name);
+      }
+    });
     return Array.from(clients.entries()).map(([id, name]) => ({ id, name }));
   }, [initialProjects]);
 
@@ -185,14 +189,14 @@ export function ProjectsPageClient({ initialProjects }: ProjectsPageClientProps)
         const query = searchQuery.toLowerCase();
         if (
           !project.name.toLowerCase().includes(query) &&
-          !project.client.name.toLowerCase().includes(query)
+          !(project.client?.name.toLowerCase().includes(query))
         ) {
           return false;
         }
       }
 
       // Client filter
-      if (selectedClients.length > 0 && !selectedClients.includes(project.client.id)) {
+      if (selectedClients.length > 0 && project.client && !selectedClients.includes(project.client.id)) {
         return false;
       }
 
@@ -603,7 +607,7 @@ export function ProjectsPageClient({ initialProjects }: ProjectsPageClientProps)
                 <Checkbox />
               </div>
               <div className="font-medium text-gray-900 truncate">
-                {project.client.name}
+                {project.client?.name || 'No Client'}
               </div>
               <div className="min-w-0">
                 <div className="flex items-center gap-1.5 flex-wrap">

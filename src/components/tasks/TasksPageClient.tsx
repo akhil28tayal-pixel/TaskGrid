@@ -44,7 +44,7 @@ interface Task {
     client: {
       id: string;
       name: string;
-    };
+    } | null;
     tag: ProjectTag | null;
   };
   assignee: {
@@ -142,7 +142,7 @@ export function TasksPageClient({ initialTasks, filters }: TasksPageClientProps)
 
       // Client filter
       if (selectedClients.length > 0) {
-        if (!selectedClients.includes(task.project.client.id)) {
+        if (!task.project.client || !selectedClients.includes(task.project.client.id)) {
           return false;
         }
       }
@@ -474,7 +474,7 @@ export function TasksPageClient({ initialTasks, filters }: TasksPageClientProps)
                 <span className="text-xs text-slate-500 flex-shrink-0">{getAccountingPeriod(task.project.dueDate)}</span>
               </div>
               <div className="text-slate-700 truncate">
-                {task.project.client.name}
+                {task.project.client?.name || 'No Client'}
               </div>
               <div className="text-slate-500">
                 0h 0m / 0h 0m

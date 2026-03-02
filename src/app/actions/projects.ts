@@ -98,10 +98,10 @@ export async function getProjects() {
       startDate: project.startDate,
       dueDate: project.dueDate,
       completedAt: project.completedAt,
-      client: {
+      client: project.client ? {
         id: project.client.id,
         name: project.client.preferredName || project.client.legalName,
-      },
+      } : null,
       tag: project.tag ? {
         id: project.tag.id,
         name: project.tag.name,
